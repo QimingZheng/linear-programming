@@ -115,8 +115,8 @@ TEST(OptimizationObject, AddItem) {
 
 TEST(LPModel, AddConstraint) {
   LPModel model;
-  Variable x1("x1"), x2("x2"), x3("x3");
-  Constraint c1, c2;
+  Variable x1("x1"), x2("x2");
+  Constraint c1, c2, c3, c4;
   c1.SetCompare(12.0);
   c1.AddItem(2.0, x1);
   c1.AddItem(1.0, x2);
@@ -127,6 +127,14 @@ TEST(LPModel, AddConstraint) {
   c2.AddItem(2.0, x2);
   c2.SetType(Constraint::Type::LE);
   model.AddConstraint(c2);
+  c3.SetCompare(0.0);
+  c3.AddItem(1.0, x1);
+  c3.SetType(Constraint::Type::GE);
+  model.AddConstraint(c3);
+  c4.SetCompare(0.0);
+  c4.AddItem(1.0, x2);
+  c4.SetType(Constraint::Type::GE);
+  model.AddConstraint(c4);
   OptimizationObject opt;
   opt.AddItem(-1.0, x1);
   opt.AddItem(-1.0, x2);
@@ -136,7 +144,9 @@ TEST(LPModel, AddConstraint) {
   EXPECT_EQ(model.ToString(),
             "min -1.000000 * x1 + -1.000000 * x2\n"
             "2.000000 * x1 + 1.000000 * x2 <= 12.000000\n"
-            "1.000000 * x1 + 2.000000 * x2 <= 9.000000\n");
+            "1.000000 * x1 + 2.000000 * x2 <= 9.000000\n"
+            "1.000000 * x1 >= 0.000000\n"
+            "1.000000 * x2 >= 0.000000\n");
 
   model.ToStandardForm();
 
@@ -157,8 +167,8 @@ TEST(LPModel, AddConstraint) {
 
 TEST(LPModel, Pivot) {
   LPModel model;
-  Variable x1("x1"), x2("x2"), x3("x3");
-  Constraint c1, c2;
+  Variable x1("x1"), x2("x2");
+  Constraint c1, c2, c3, c4;
   c1.SetCompare(12.0);
   c1.AddItem(2.0, x1);
   c1.AddItem(1.0, x2);
@@ -169,6 +179,14 @@ TEST(LPModel, Pivot) {
   c2.AddItem(2.0, x2);
   c2.SetType(Constraint::Type::LE);
   model.AddConstraint(c2);
+  c3.SetCompare(0.0);
+  c3.AddItem(1.0, x1);
+  c3.SetType(Constraint::Type::GE);
+  model.AddConstraint(c3);
+  c4.SetCompare(0.0);
+  c4.AddItem(1.0, x2);
+  c4.SetType(Constraint::Type::GE);
+  model.AddConstraint(c4);
   OptimizationObject opt;
   opt.AddItem(-1.0, x1);
   opt.AddItem(-1.0, x2);
@@ -196,8 +214,8 @@ TEST(LPModel, Pivot) {
 
 TEST(LPModel, Solve) {
   LPModel model;
-  Variable x1("x1"), x2("x2"), x3("x3");
-  Constraint c1, c2;
+  Variable x1("x1"), x2("x2");
+  Constraint c1, c2, c3, c4;
   c1.SetCompare(12.0);
   c1.AddItem(2.0, x1);
   c1.AddItem(1.0, x2);
@@ -208,6 +226,14 @@ TEST(LPModel, Solve) {
   c2.AddItem(2.0, x2);
   c2.SetType(Constraint::Type::LE);
   model.AddConstraint(c2);
+  c3.SetCompare(0.0);
+  c3.AddItem(1.0, x1);
+  c3.SetType(Constraint::Type::GE);
+  model.AddConstraint(c3);
+  c4.SetCompare(0.0);
+  c4.AddItem(1.0, x2);
+  c4.SetType(Constraint::Type::GE);
+  model.AddConstraint(c4);
   OptimizationObject opt;
   opt.AddItem(-1.0, x1);
   opt.AddItem(-1.0, x2);

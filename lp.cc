@@ -1,6 +1,7 @@
 #include "lp.h"
 
 int Variable::base_variable_count_ = 0;
+int Variable::substitution_variable_count_ = 0;
 
 void Expression::Add(Expression expression) {
   constant += expression.constant;
@@ -40,6 +41,20 @@ void LPModel::ToStandardForm() {
     }
     opt_obj_.type = OptimizationObject::Type::MAX;
   }
+  std::vector<Constraint> equation_constraint;
+  for (auto& constraint : constraints_) {
+    if (constraint.type == Constraint::Type::EQ) {
+      constraint.type = Constraint::Type::GE;
+      Constraint con;
+      con.SetCompare(constraint.compare);
+      con.SetType(Constraint::Type::LE);
+      con.expression = constraint.expression;
+      equation_constraint.push_back(con);
+    }
+  }
+  for (auto constrain : equation_constraint) {
+    constraints_.push_back(constrain);
+  }
   for (auto& constraint : constraints_) {
     constraint.compare -= constraint.expression.constant;
     constraint.expression.constant = 0.0;
@@ -49,19 +64,61 @@ void LPModel::ToStandardForm() {
       }
       constraint.compare *= -1.0;
       constraint.type = Constraint::Type::LE;
-    } else if (constraint.type == Constraint::Type::EQ) {
-      // TODO: split this constraint into two constraints.
     }
   }
-  // TODO: add constraints for un-constrained variables.
-}
-
-void LPModel::ToRelaxedForm() {
+  std::set<Variable> positive_vars;
+  std::vector<int> positive_con_index;
+  for (int i = 0; i < constraints_.size(); i++) {
+    auto& constraint = constraints_[i];
+    if (constraint.expression.variable_coeff.size() == 1 and
+        constraint.expression.constant == 0.0) {
+      auto entry = constraint.expression.variable_coeff.begin();
+      if (entry->second < 0.0) {
+        if (constraint.compare <= 0.0) {
+          positive_vars.insert(entry->first);
+          positive_con_index.push_back(i);
+        }
+      } else {
+        if (constraint.compare >= 0.0) {
+          positive_vars.insert(entry->first);
+          positive_con_index.push_back(i);
+        }
+      }
+    }
+  }
+  std::reverse(positive_con_index.begin(), positive_con_index.end());
+  for (auto ind : positive_con_index) {
+    constraints_.erase(constraints_.begin() + ind);
+  }
   for (auto constraint : constraints_) {
     for (auto entry : constraint.expression.variable_coeff) {
       non_base_variables_.insert(entry.first);
     }
   }
+  std::set<Variable> no_limit_vars;
+  for (auto non_base : non_base_variables_) {
+    if (positive_vars.find(non_base) == positive_vars.end()) {
+      // non_base has no constraints on its positive/negative property.
+      no_limit_vars.insert(non_base);
+    }
+  }
+  for (auto var : no_limit_vars) {
+    non_base_variables_.erase(var);
+    Variable s1 = Variable::CreateSubstitutionVariable(),
+             s2 = Variable::CreateSubstitutionVariable();
+    Expression exp;
+    exp.SetCoeffOf(var, 1.0);
+    exp.SetCoeffOf(s1, -1.0);
+    exp.SetCoeffOf(s2, 1.0);
+    for (auto& constraint : constraints_) {
+      constraint.expression.ReplaceVariableWithExpression(var, exp);
+    }
+    non_base_variables_.insert(s1);
+    non_base_variables_.insert(s2);
+  }
+}
+
+void LPModel::ToRelaxedForm() {
   for (auto& constraint : constraints_) {
     auto base_var = Variable::CreateBaseVariable();
     for (auto& entry : constraint.expression.variable_coeff) {

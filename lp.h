@@ -12,6 +12,7 @@ typedef float Num;
 
 const std::string kUndefined = "undefined";
 const std::string kBase = "base";
+const std::string kSubstitution = "subst";
 
 struct Variable {
  public:
@@ -26,11 +27,22 @@ struct Variable {
     return var;
   }
 
-  static void Reset() { base_variable_count_ = 0; }
+  static Variable CreateSubstitutionVariable() {
+    auto var =
+        Variable(kSubstitution + std::to_string(substitution_variable_count_));
+    substitution_variable_count_ += 1;
+    return var;
+  }
+
+  static void Reset() {
+    base_variable_count_ = 0;
+    substitution_variable_count_ = 0;
+  }
 
   std::string variable_name;
 
   static int base_variable_count_;
+  static int substitution_variable_count_;
 };
 
 bool operator==(const Variable &lhs, const Variable &rhs) {
