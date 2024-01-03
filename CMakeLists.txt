@@ -19,6 +19,8 @@ target_link_libraries(GTest::GTest INTERFACE gtest_main gmock_main)
 include_directories(lp_header lp.h)
 add_library(lp_library SHARED lp.cc)
 
+enable_testing()
+
 add_executable(
   lp_test
   lp_test.cc
@@ -28,4 +30,9 @@ target_link_libraries(
   lp_test
   GTest::GTest
   lp_library
+)
+
+add_test(
+  NAME test
+  COMMAND lp_test
 )
