@@ -1,15 +1,14 @@
 #include "lp.h"
 
-void Expression::ReplaceVariableWithExpression(Variable var,
-                                               Expression replace) {
-  Num coeff = variable_coeff[var];
-  constant += coeff * replace.constant;
-  variable_coeff.erase(var);
-  for (auto entry : replace.variable_coeff) {
-    if (variable_coeff.find(entry.first) != variable_coeff.end()) {
-      variable_coeff[entry.first] += coeff * entry.second;
+int Variable::base_variable_count_ = 0;
+
+void Expression::Add(Expression expression) {
+  constant += expression.constant;
+  for (auto entry : expression.variable_coeff) {
+    if (GetCoeffOf(entry.first) != 0.0) {
+      variable_coeff[entry.first] += entry.second;
     } else {
-      variable_coeff[entry.first] = coeff * entry.second;
+      variable_coeff[entry.first] = entry.second;
     }
   }
   std::vector<Variable> to_clean_up;
@@ -23,6 +22,15 @@ void Expression::ReplaceVariableWithExpression(Variable var,
   }
 }
 
+void Expression::ReplaceVariableWithExpression(Variable var,
+                                               Expression replace) {
+  Num coeff = GetCoeffOf(var);
+  if (coeff == 0.0) return;
+  replace.Multiply(coeff);
+  variable_coeff.erase(var);
+  Add(replace);
+}
+
 void LPModel::Pivot(Variable base, Variable non_base) {
   Expression substitution;
   for (auto& constraint : constraints_) {
@@ -34,7 +42,7 @@ void LPModel::Pivot(Variable base, Variable non_base) {
       substitution.SetConstant(constraint.expression.constant / dividend);
       for (auto entry : constraint.expression.variable_coeff) {
         if (entry.first != non_base)
-          substitution.AddItem(entry.second / dividend, entry.first);
+          substitution.SetCoeffOf(entry.first, entry.second / dividend);
       }
       base_variables_.erase(base);
       base_variables_.insert(non_base);
@@ -52,9 +60,10 @@ void LPModel::Pivot(Variable base, Variable non_base) {
                                                           substitution);
     }
   }
+  opt_obj_.expression.ReplaceVariableWithExpression(non_base, substitution);
 }
 
-void LPModel::Solve() {
+LPModel::Result LPModel::Solve() {
   // Step 1: If there are negative constants in some constraint, use Pivot to
   // convert them to positive.
 
@@ -68,29 +77,27 @@ void LPModel::Solve() {
         break;
       }
     }
-    if (e.variable_name == "undefined") {
-      return;
+    if (e.IsUndefined()) {
+      return SOLVED;
     }
     Variable d;
     Num min_ = -10000000;
     for (auto var : base_variables_) {
       for (auto constraint : constraints_) {
-        if (constraint.expression.variable_coeff.find(var) !=
-            constraint.expression.variable_coeff.end()) {
-          if (-constraint.expression.variable_coeff[var] > 0) {
-            if (min_ > constraint.expression.constant /
-                           (-constraint.expression.variable_coeff[var])) {
-              min_ = constraint.expression.constant /
-                     (-constraint.expression.variable_coeff[var]);
-              d = var;
-            }
+        if (-constraint.expression.GetCoeffOf(var) > 0) {
+          if (min_ > constraint.expression.constant /
+                         (-constraint.expression.variable_coeff[var])) {
+            min_ = constraint.expression.constant /
+                   (-constraint.expression.variable_coeff[var]);
+            d = var;
           }
         }
       }
     }
-    if (d.variable_name == "undefined") {
-      return;
+    if (d.IsUndefined()) {
+      return UNBOUNDED;
     }
     Pivot(e, d);
   }
+  return NOSOLUTION;
 }

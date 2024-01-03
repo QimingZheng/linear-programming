@@ -6,14 +6,31 @@
 #include <map>
 #include <set>
 #include <string>
+#include <vector>
+
 typedef float Num;
+
+const std::string kUndefined = "undefined";
+const std::string kBase = "base";
 
 struct Variable {
  public:
-  Variable() { variable_name = "undefined"; }
+  Variable() { variable_name = kUndefined; }
   Variable(std::string variable_name) { this->variable_name = variable_name; }
 
+  bool IsUndefined() const { return variable_name == kUndefined; }
+
+  static Variable CreateBaseVariable() {
+    auto var = Variable(kBase + std::to_string(base_variable_count_));
+    base_variable_count_ += 1;
+    return var;
+  }
+
+  static void Reset() { base_variable_count_ = 0; }
+
   std::string variable_name;
+
+  static int base_variable_count_;
 };
 
 bool operator==(const Variable &lhs, const Variable &rhs) {
@@ -25,27 +42,47 @@ bool operator!=(const Variable &lhs, const Variable &rhs) {
 }
 
 bool operator<(const Variable &lhs, const Variable &rhs) {
+  // TODO: if start with kBase, then should be of lower priority.
   return lhs.variable_name < rhs.variable_name;
 }
 
 struct Expression {
  public:
-  void AddItem(Num coeff, Variable var) {
-    if (variable_coeff.find(var) != variable_coeff.end()) return;
-    if (coeff == 0.0) return;
-    variable_coeff[var] = coeff;
-  }
   void SetConstant(Num constant) { this->constant = constant; }
+  void Multiply(Num multiplier) {
+    for (auto &entry : variable_coeff) {
+      entry.second *= multiplier;
+    }
+    constant *= multiplier;
+  }
+  void Add(Expression expression);
+
+  Num GetCoeffOf(Variable var) {
+    if (variable_coeff.find(var) == variable_coeff.end())
+      return 0.0;
+    else
+      return variable_coeff[var];
+  }
+  void SetCoeffOf(Variable var, Num num) {
+    if (num == 0.0) {
+      variable_coeff.erase(var);
+    } else {
+      variable_coeff[var] = num;
+    }
+  }
 
   void ReplaceVariableWithExpression(Variable var, Expression expression);
 
   std::string ToString() {
     std::string ret = "";
+    int i = 0;
     for (auto entry : variable_coeff) {
+      i += 1;
       ret += std::to_string(entry.second) + " * " + entry.first.variable_name +
-             " + ";
+             (i == variable_coeff.size() ? "" : " + ");
     }
-    ret += std::to_string(constant);
+    if (constant != 0.0)
+      ret += (ret.length() ? " + " : "") + std::to_string(constant);
     return ret;
   }
 
@@ -62,11 +99,10 @@ struct Constraint {
     EQ,  // equal to
   };
 
-  void AddItem(Num coeff, Variable var);
-  void AddConstant(Num constant);
-  void SetCompare(Num compare);
-  void SetType(Type type);
-  void Replace();
+  void AddItem(Num coeff, Variable var) { expression.SetCoeffOf(var, coeff); }
+  void SetConstant(Num constant) { expression.SetConstant(constant); }
+  void SetCompare(Num compare) { this->compare = compare; }
+  void SetType(Type type) { this->type = type; }
 
   std::string ToString() {
     std::string ret = expression.ToString() + " ";
@@ -84,7 +120,7 @@ struct Constraint {
       default:
         break;
     }
-    ret += " " + std::to_string(compare) + "\n";
+    ret += " " + std::to_string(compare);
     return ret;
   }
 
@@ -100,6 +136,9 @@ struct OptimizationObject {
     MAX,
   };
 
+  void AddItem(Num coeff, Variable var) { expression.SetCoeffOf(var, coeff); }
+  void SetType(Type type) { this->type = type; }
+
   std::string ToString() {
     std::string ret = "";
     switch (type) {
@@ -113,19 +152,23 @@ struct OptimizationObject {
       default:
         break;
     }
-    for (auto entry : expression.variable_coeff) {
-      ret += std::to_string(entry.second) + " * " + entry.first.variable_name +
-             " + ";
-    }
-    return ret;
+    return ret + expression.ToString();
   }
 
   Expression expression;
-  Type type;
+  Type type = MIN;
 };
 
 class LPModel {
  public:
+  enum Result {
+    UNBOUNDED,
+    NOSOLUTION,
+    SOLVED,
+  };
+
+  LPModel() { Variable::Reset(); }
+
   void AddConstraint(Constraint constraint) {
     constraints_.push_back(constraint);
   }
@@ -164,8 +207,13 @@ class LPModel {
 
   // Transform the LP model to the relaxed form:
   void ToRelaxedForm() {
+    for (auto constraint : constraints_) {
+      for (auto entry : constraint.expression.variable_coeff) {
+        non_base_variables_.insert(entry.first);
+      }
+    }
     for (auto &constraint : constraints_) {
-      auto base_var = Variable();
+      auto base_var = Variable::CreateBaseVariable();
       for (auto &entry : constraint.expression.variable_coeff) {
         entry.second *= -1.0;
       }
@@ -177,17 +225,20 @@ class LPModel {
     }
   }
 
-  void Solve();
+  Result Solve();
 
   std::string ToString() {
-    opt_obj_.ToString();
+    std::string ret = "";
+    ret += opt_obj_.ToString() + "\n";
     for (auto constraint : constraints_) {
-      constraint.ToString();
+      ret += constraint.ToString() + "\n";
     }
+    return ret;
   }
 
- private:
   void Pivot(Variable base, Variable non_base);
+
+ private:
   std::vector<Constraint> constraints_;
   OptimizationObject opt_obj_;
   std::set<Variable> base_variables_;
