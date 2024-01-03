@@ -188,6 +188,8 @@ class LPModel {
 
   Result Solve();
 
+  Num GetOptimum();
+
   std::string ToString() {
     std::string ret = "";
     ret += opt_obj_.ToString() + "\n";
@@ -204,4 +206,5 @@ class LPModel {
   OptimizationObject opt_obj_;
   std::set<Variable> base_variables_;
   std::set<Variable> non_base_variables_;
+  bool opt_reverted_ = false;
 };

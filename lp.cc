@@ -34,6 +34,7 @@ void Expression::ReplaceVariableWithExpression(Variable var,
 void LPModel::ToStandardForm() {
   // Opt obj transform.
   if (opt_obj_.type == OptimizationObject::Type::MIN) {
+    opt_reverted_ = true;
     for (auto& entry : opt_obj_.expression.variable_coeff) {
       entry.second *= -1.0;
     }
@@ -94,6 +95,7 @@ void LPModel::Pivot(Variable base, Variable non_base) {
       break;
     }
   }
+  opt_obj_.expression.ReplaceVariableWithExpression(non_base, substitution);
   for (auto& constraint : constraints_) {
     if (constraint.expression.variable_coeff.find(base) ==
             constraint.expression.variable_coeff.end() and
@@ -103,7 +105,6 @@ void LPModel::Pivot(Variable base, Variable non_base) {
                                                           substitution);
     }
   }
-  opt_obj_.expression.ReplaceVariableWithExpression(non_base, substitution);
 }
 
 LPModel::Result LPModel::Solve() {
@@ -145,4 +146,15 @@ LPModel::Result LPModel::Solve() {
     Pivot(d, e);
   }
   return NOSOLUTION;
+}
+
+Num LPModel::GetOptimum() {
+  for (auto& entry : opt_obj_.expression.variable_coeff) {
+    if (non_base_variables_.find(entry.first) != non_base_variables_.end() and
+        entry.second > 0) {
+      throw std::runtime_error("Not Solved");
+    }
+  }
+  if (opt_reverted_) return -opt_obj_.expression.constant;
+  return opt_obj_.expression.constant;
 }

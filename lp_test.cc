@@ -223,4 +223,5 @@ TEST(LPModel, Solve) {
             "= 0.000000\n"
             "0.500000 * base0 + -1.000000 * base1 + -1.500000 * x2 + 3.000000 "
             "= 0.000000\n");
+  EXPECT_EQ(model.GetOptimum(), -7);
 }
