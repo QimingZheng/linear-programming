@@ -31,6 +31,49 @@ void Expression::ReplaceVariableWithExpression(Variable var,
   Add(replace);
 }
 
+void LPModel::ToStandardForm() {
+  // Opt obj transform.
+  if (opt_obj_.type == OptimizationObject::Type::MIN) {
+    for (auto& entry : opt_obj_.expression.variable_coeff) {
+      entry.second *= -1.0;
+    }
+    opt_obj_.type = OptimizationObject::Type::MAX;
+  }
+  for (auto& constraint : constraints_) {
+    constraint.compare -= constraint.expression.constant;
+    constraint.expression.constant = 0.0;
+    if (constraint.type == Constraint::Type::GE) {
+      for (auto& entry : constraint.expression.variable_coeff) {
+        entry.second *= -1.0;
+      }
+      constraint.compare *= -1.0;
+      constraint.type = Constraint::Type::LE;
+    } else if (constraint.type == Constraint::Type::EQ) {
+      // TODO: split this constraint into two constraints.
+    }
+  }
+  // TODO: add constraints for un-constrained variables.
+}
+
+void LPModel::ToRelaxedForm() {
+  for (auto constraint : constraints_) {
+    for (auto entry : constraint.expression.variable_coeff) {
+      non_base_variables_.insert(entry.first);
+    }
+  }
+  for (auto& constraint : constraints_) {
+    auto base_var = Variable::CreateBaseVariable();
+    for (auto& entry : constraint.expression.variable_coeff) {
+      entry.second *= -1.0;
+    }
+    constraint.expression.constant = constraint.compare;
+    constraint.compare = 0.0;
+    constraint.type = Constraint::Type::EQ;
+    constraint.AddItem(-1.0, base_var);
+    base_variables_.insert(base_var);
+  }
+}
+
 void LPModel::Pivot(Variable base, Variable non_base) {
   assert(non_base_variables_.find(non_base) != non_base_variables_.end());
   assert(base_variables_.find(base) != base_variables_.end());
