@@ -1,7 +1,7 @@
+#include "lp.h"
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-
-#include "lp.h"
 
 TEST(Variable, IsUndefined) {
   EXPECT_EQ(Variable().IsUndefined(), true);
@@ -184,6 +184,14 @@ TEST(LPModel, Pivot) {
             "0.000000\n"
             "0.500000 * base0 + -1.000000 * base1 + -1.500000 * x2 + 3.000000 "
             "= 0.000000\n");
+
+  model.Pivot(Variable("base1"), Variable("x2"));
+  EXPECT_EQ(model.ToString(),
+            "max -0.333333 * base0 + -0.333333 * base1 + 7.000000\n"
+            "-1.333333 * base0 + 0.666667 * base1 + -2.000000 * x1 + 10.000000 "
+            "= 0.000000\n"
+            "0.500000 * base0 + -1.000000 * base1 + -1.500000 * x2 + 3.000000 "
+            "= 0.000000\n");
 }
 
 TEST(LPModel, Solve) {
@@ -208,11 +216,11 @@ TEST(LPModel, Solve) {
   model.ToStandardForm();
   model.ToRelaxedForm();
 
-  EXPECT_EQ(model.Solve(), LPModel::Result::UNBOUNDED);
+  EXPECT_EQ(model.Solve(), LPModel::Result::SOLVED);
   EXPECT_EQ(model.ToString(),
-            "max 1.000000 * x1 + 1.000000 * x2\n"
-            "-1.000000 * base0 + -2.000000 * x1 + -1.000000 * x2 + 12.000000 = "
-            "0.000000\n"
-            "-1.000000 * base1 + -1.000000 * x1 + -2.000000 * x2 + 9.000000 = "
-            "0.000000\n");
+            "max -0.333333 * base0 + -0.333333 * base1 + 7.000000\n"
+            "-1.333333 * base0 + 0.666667 * base1 + -2.000000 * x1 + 10.000000 "
+            "= 0.000000\n"
+            "0.500000 * base0 + -1.000000 * base1 + -1.500000 * x2 + 3.000000 "
+            "= 0.000000\n");
 }

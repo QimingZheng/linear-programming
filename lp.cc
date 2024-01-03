@@ -32,13 +32,13 @@ void Expression::ReplaceVariableWithExpression(Variable var,
 }
 
 void LPModel::Pivot(Variable base, Variable non_base) {
+  assert(non_base_variables_.find(non_base) != non_base_variables_.end());
+  assert(base_variables_.find(base) != base_variables_.end());
   Expression substitution;
   for (auto& constraint : constraints_) {
-    if (constraint.expression.variable_coeff.find(base) !=
-            constraint.expression.variable_coeff.end() and
-        constraint.expression.variable_coeff.find(non_base) !=
-            constraint.expression.variable_coeff.end()) {
-      Num dividend = (-constraint.expression.variable_coeff[non_base]);
+    if (constraint.expression.GetCoeffOf(base) != 0.0 and
+        constraint.expression.GetCoeffOf(non_base) != 0.0) {
+      Num dividend = (-constraint.expression.GetCoeffOf(non_base));
       substitution.SetConstant(constraint.expression.constant / dividend);
       for (auto entry : constraint.expression.variable_coeff) {
         if (entry.first != non_base)
@@ -81,15 +81,17 @@ LPModel::Result LPModel::Solve() {
       return SOLVED;
     }
     Variable d;
-    Num min_ = -10000000;
-    for (auto var : base_variables_) {
+    Num min_ = 10000000000;
+    for (auto base : base_variables_) {
       for (auto constraint : constraints_) {
-        if (-constraint.expression.GetCoeffOf(var) > 0) {
+        assert(constraint.expression.constant >= 0.0);
+        if (constraint.expression.GetCoeffOf(base) != 0 and
+            -constraint.expression.GetCoeffOf(e) > 0) {
           if (min_ > constraint.expression.constant /
-                         (-constraint.expression.variable_coeff[var])) {
+                         (-constraint.expression.GetCoeffOf(e))) {
             min_ = constraint.expression.constant /
-                   (-constraint.expression.variable_coeff[var]);
-            d = var;
+                   (-constraint.expression.GetCoeffOf(e));
+            d = base;
           }
         }
       }
@@ -97,7 +99,7 @@ LPModel::Result LPModel::Solve() {
     if (d.IsUndefined()) {
       return UNBOUNDED;
     }
-    Pivot(e, d);
+    Pivot(d, e);
   }
   return NOSOLUTION;
 }
