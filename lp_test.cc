@@ -1,7 +1,7 @@
-#include "lp.h"
-
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include "lp.h"
 
 TEST(Variable, IsUndefined) {
   EXPECT_EQ(Variable().IsUndefined(), true);
@@ -250,4 +250,6 @@ TEST(LPModel, Solve) {
             "0.500000 * base0 + -1.000000 * base1 + -1.500000 * x2 + 3.000000 "
             "= 0.000000\n");
   EXPECT_EQ(model.GetOptimum(), -7);
+  auto sol = std::map<Variable, Num>({{x1, 5}, {x2, 2}});
+  EXPECT_EQ(model.GetSolution(), sol);
 }

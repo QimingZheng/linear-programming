@@ -7,6 +7,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <algorithm>
 
 typedef float Num;
 
@@ -20,6 +21,11 @@ struct Variable {
   Variable(std::string variable_name) { this->variable_name = variable_name; }
 
   bool IsUndefined() const { return variable_name == kUndefined; }
+
+  bool IsUserDefined() const {
+    return variable_name.rfind(kBase, 0) != 0 &&
+           variable_name.rfind(kSubstitution, 0) != 0;
+  }
 
   static Variable CreateBaseVariable() {
     auto var = Variable(kBase + std::to_string(base_variable_count_));
@@ -201,6 +207,8 @@ class LPModel {
   Result Solve();
 
   Num GetOptimum();
+
+  std::map<Variable, Num> GetSolution();
 
   std::string ToString() {
     std::string ret = "";

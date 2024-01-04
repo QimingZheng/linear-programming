@@ -215,3 +215,21 @@ Num LPModel::GetOptimum() {
   if (opt_reverted_) return -opt_obj_.expression.constant;
   return opt_obj_.expression.constant;
 }
+
+std::map<Variable, Num> LPModel::GetSolution() {
+  std::map<Variable, Num> sol;
+  for (auto entry : non_base_variables_) {
+    if (entry.IsUserDefined()) {
+      sol[entry] = 0.0;
+    }
+  }
+  for (auto base : base_variables_) {
+    for (auto constraint : constraints_) {
+      if (constraint.expression.GetCoeffOf(base) != 0.0) {
+        sol[base] =
+            -constraint.expression.constant / constraint.expression.GetCoeffOf(base);
+      }
+    }
+  }
+  return sol;
+}
