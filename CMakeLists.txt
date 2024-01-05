@@ -19,6 +19,10 @@ target_link_libraries(GTest::GTest INTERFACE gtest_main gmock_main)
 include_directories(lp_header lp.h)
 add_library(lp_library SHARED lp.cc)
 
+add_executable(solver solver.cc)
+target_include_directories(solver PRIVATE lp_header)
+target_link_libraries(solver lp_library)
+
 enable_testing()
 
 add_executable(
