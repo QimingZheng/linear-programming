@@ -2,12 +2,12 @@
 
 #include <assert.h>
 
+#include <algorithm>
 #include <iostream>
 #include <map>
 #include <set>
 #include <string>
 #include <vector>
-#include <algorithm>
 
 typedef float Num;
 
@@ -83,7 +83,8 @@ struct Expression {
   }
   void SetCoeffOf(Variable var, Num num) {
     if (num == 0.0) {
-      variable_coeff.erase(var);
+      if (variable_coeff.find(var) != variable_coeff.end())
+        variable_coeff.erase(var);
     } else {
       variable_coeff[var] = num;
     }
@@ -220,6 +221,8 @@ class LPModel {
   }
 
   void Pivot(Variable base, Variable non_base);
+
+  Result Initialize();
 
  private:
   std::vector<Constraint> constraints_;

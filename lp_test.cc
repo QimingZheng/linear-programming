@@ -1,7 +1,7 @@
+#include "lp.h"
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-
-#include "lp.h"
 
 TEST(Variable, IsUndefined) {
   EXPECT_EQ(Variable().IsUndefined(), true);
@@ -252,4 +252,59 @@ TEST(LPModel, Solve) {
   EXPECT_EQ(model.GetOptimum(), -7);
   auto sol = std::map<Variable, Num>({{x1, 5}, {x2, 2}});
   EXPECT_EQ(model.GetSolution(), sol);
+}
+
+TEST(LPModel, Initialization) {
+  // Test the two phase algorithm.
+  LPModel model;
+  Variable x1("x1"), x2("x2");
+  Constraint c1, c2, c3, c4, c5;
+  c1.SetCompare(1.0);
+  c1.AddItem(1.0, x1);
+  c1.AddItem(1.0, x2);
+  c1.SetType(Constraint::Type::GE);
+  model.AddConstraint(c1);
+  c2.SetCompare(1.0);
+  c2.AddItem(2.0, x1);
+  c2.AddItem(-1.0, x2);
+  c2.SetType(Constraint::Type::GE);
+  model.AddConstraint(c2);
+  c3.SetCompare(2.0);
+  c3.AddItem(3.0, x2);
+  c3.SetType(Constraint::Type::LE);
+  model.AddConstraint(c3);
+  c4.SetCompare(0.0);
+  c4.AddItem(1.0, x1);
+  c4.SetType(Constraint::Type::GE);
+  model.AddConstraint(c4);
+  c5.SetCompare(0.0);
+  c5.AddItem(1.0, x2);
+  c5.SetType(Constraint::Type::GE);
+  model.AddConstraint(c5);
+  OptimizationObject opt;
+  opt.AddItem(6.0, x1);
+  opt.AddItem(3.0, x2);
+  opt.SetType(OptimizationObject::Type::MIN);
+  model.SetOptimizationObject(opt);
+  model.ToStandardForm();
+  model.ToRelaxedForm();
+
+  EXPECT_EQ(model.ToString(),
+            "max -6.000000 * x1 + -3.000000 * x2\n"
+            "-1.000000 * base0 + 1.000000 * x1 + 1.000000 * x2 + -1.000000 = "
+            "0.000000\n"
+            "-1.000000 * base1 + 2.000000 * x1 + -1.000000 * x2 + -1.000000 = "
+            "0.000000\n"
+            "-1.000000 * base2 + -3.000000 * x2 + 2.000000 = 0.000000\n");
+  EXPECT_EQ(model.Initialize(), LPModel::Result::SOLVED);
+  EXPECT_EQ(model.ToString(),
+            "max -6.000000 * x1 + -3.000000 * x2\n"
+            "-1.000000 * base0 + 1.000000 * x1 + 1.000000 * x2 + -1.000000 = "
+            "0.000000\n"
+            "-1.000000 * base1 + 2.000000 * x1 + -1.000000 * x2 + -1.000000 = "
+            "0.000000\n"
+            "-1.000000 * base2 + -3.000000 * x2 + 2.000000 = 0.000000\n");
+
+  EXPECT_EQ(model.Solve(), LPModel::Result::SOLVED);
+  EXPECT_EQ(model.GetOptimum(), 5.0);
 }
