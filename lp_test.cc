@@ -314,4 +314,11 @@ TEST(LPModel, Initialization) {
 
   EXPECT_EQ(model.Solve(), LPModel::Result::SOLVED);
   EXPECT_EQ(model.GetOptimum(), 5.0);
+  auto expected_sol = std::map<Variable, Num>({{x1, 2.0 / 3}, {x2, 1.0 / 3}});
+  auto actual_sol = model.GetSolution();
+  EXPECT_EQ(expected_sol.size(), actual_sol.size());
+  for (auto entry : expected_sol) {
+    EXPECT_EQ(actual_sol.find(entry.first) != actual_sol.end(), true);
+    EXPECT_LE(abs(entry.second - actual_sol[entry.first]), 1e-6);
+  }
 }

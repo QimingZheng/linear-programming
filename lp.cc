@@ -309,8 +309,10 @@ std::map<Variable, Num> LPModel::GetSolution() {
   for (auto base : base_variables_) {
     for (auto constraint : constraints_) {
       if (constraint.expression.GetCoeffOf(base) != 0.0) {
-        sol[base] = -constraint.expression.constant /
-                    constraint.expression.GetCoeffOf(base);
+        if (base.IsUserDefined()) {
+          sol[base] = -constraint.expression.constant /
+                      constraint.expression.GetCoeffOf(base);
+        }
       }
     }
   }
