@@ -163,6 +163,9 @@ void LPModel::Pivot(Variable base, Variable non_base) {
             constraint.expression.variable_coeff.end()) {
       constraint.expression.ReplaceVariableWithExpression(non_base,
                                                           substitution);
+    } else {
+      Num coeff = constraint.expression.GetCoeffOf(non_base);
+      constraint.expression.Multiply(-1.0 / coeff);
     }
   }
 }
@@ -172,7 +175,7 @@ LPModel::Result LPModel::Initialize() {
   // method to transform the constrain system to non-negative form.
   bool need_transform = false;
   for (auto constraint : constraints_) {
-    if (constraint.compare < 0.0) {
+    if (constraint.expression.constant < 0.0) {
       need_transform = true;
     }
   }
@@ -184,26 +187,30 @@ LPModel::Result LPModel::Initialize() {
     model.AddConstraint(constraint);
   }
   model.non_base_variables_ = non_base_variables_;
-  for (auto base : base_variables_) model.non_base_variables_.insert(base);
-  model.base_variables_.insert(artificial_var);
+  model.non_base_variables_.insert(artificial_var);
+  model.base_variables_ = base_variables_;
   OptimizationObject obj;
   obj.AddItem(-1.0, artificial_var);
   obj.SetType(OptimizationObject::MAX);
   model.SetOptimizationObject(obj);
   Num minimum = 0.0;
-  int best = 0;
-  for (int i = 0; i < constraints_.size(); i++) {
-    auto constraint = constraints_[i];
-    if (constraint.expression.constant <= 0.0) {
+  int best = -1;
+  for (int i = 0; i < model.constraints_.size(); i++) {
+    auto constraint = model.constraints_[i];
+    if (constraint.expression.constant < minimum) {
       minimum = std::min(minimum, constraint.expression.constant);
       best = i;
     }
   }
-  for (auto entry : constraints_[best].expression.variable_coeff) {
+  assert(best >= 0);
+  for (auto entry : model.constraints_[best].expression.variable_coeff) {
     auto var = entry.first;
     if (base_variables_.find(var) != base_variables_.end()) {
       model.Pivot(var, artificial_var);
     }
+  }
+  for (auto constraint : model.constraints_) {
+    assert(constraint.expression.constant >= 0.0);
   }
   model.Solve();
   if (model.GetOptimum() < 0.0) {
@@ -212,7 +219,7 @@ LPModel::Result LPModel::Initialize() {
   if (model.base_variables_.find(artificial_var) !=
       model.base_variables_.end()) {
     auto any_non_base_var = model.non_base_variables_.begin();
-    model.Pivot(*any_non_base_var, artificial_var);
+    model.Pivot(artificial_var, *any_non_base_var);
   }
   assert(model.non_base_variables_.find(artificial_var) !=
          model.non_base_variables_.end());
@@ -220,6 +227,21 @@ LPModel::Result LPModel::Initialize() {
     constraint.expression.SetCoeffOf(artificial_var, 0.0);
   }
   constraints_ = model.constraints_;
+  model.non_base_variables_.erase(artificial_var);
+  base_variables_ = model.base_variables_;
+  non_base_variables_ = model.non_base_variables_;
+  for (auto base : model.base_variables_) {
+    Expression substitution;
+    for (auto constraint : model.constraints_) {
+      if (constraint.expression.GetCoeffOf(base) != 0.0) {
+        substitution = constraint.expression;
+        substitution.Multiply(-1.0 / constraint.expression.GetCoeffOf(base));
+        substitution.SetCoeffOf(base, 0.0);
+        break;
+      }
+    }
+    opt_obj_.expression.ReplaceVariableWithExpression(base, substitution);
+  }
   return SOLVED;
 }
 
@@ -227,7 +249,7 @@ LPModel::Result LPModel::Solve() {
   auto res = Initialize();
   if (res == NOSOLUTION) return NOSOLUTION;
   for (auto constraint : constraints_) {
-    assert(constraint.compare >= 0.0);
+    assert(constraint.expression.constant >= 0.0);
   }
   // Phase 2: The main optimization procedures.
   while (true) {
@@ -263,7 +285,7 @@ LPModel::Result LPModel::Solve() {
     }
     Pivot(d, e);
   }
-  return NOSOLUTION;
+  throw std::runtime_error("Should not reach this line");
 }
 
 Num LPModel::GetOptimum() {
