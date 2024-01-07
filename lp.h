@@ -21,73 +21,6 @@ bool IsUserDefined(Variable var) {
          var.variable_name.rfind(kSubstitution, 0) != 0;
 }
 
-// \sum_{i} c_i * x_i + constant <=/>=/= compare.
-struct Constraint {
- public:
-  enum Type {
-    LE,  // less than or equal to
-    GE,  // greater than or equal to
-    EQ,  // equal to
-  };
-
-  void SetConstant(Num constant) { expression.constant = constant; }
-  void SetCompare(Num compare) { this->compare = compare; }
-  void SetType(Type type) { this->type = type; }
-
-  std::string ToString() {
-    std::string ret = expression.ToString() + " ";
-    switch (type) {
-      case LE:
-        ret += "<=";
-        break;
-      case GE:
-        ret += ">=";
-        break;
-      case EQ:
-        ret += "=";
-        break;
-
-      default:
-        break;
-    }
-    ret += " " + compare.ToString();
-    return ret;
-  }
-
-  Expression expression = Expression(0.0f);
-  Num compare = 0.0f;
-  Type type = Type::EQ;
-};
-
-struct OptimizationObject {
- public:
-  enum Type {
-    MIN,
-    MAX,
-  };
-
-  void SetType(Type type) { this->type = type; }
-
-  std::string ToString() {
-    std::string ret = "";
-    switch (type) {
-      case MIN:
-        ret = "min ";
-        break;
-      case MAX:
-        ret = "max ";
-        break;
-
-      default:
-        break;
-    }
-    return ret + expression.ToString();
-  }
-
-  Expression expression = Expression(0.0f);
-  Type type = MIN;
-};
-
 class LPModel {
  public:
   enum Result {
@@ -96,7 +29,7 @@ class LPModel {
     SOLVED,
   };
 
-  LPModel() { Reset(); }
+  LPModel() : opt_obj_(OptimizationObject(FLOAT)) { Reset(); }
 
   void AddConstraint(Constraint constraint) {
     constraints_.push_back(constraint);

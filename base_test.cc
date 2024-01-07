@@ -111,3 +111,28 @@ TEST(Expression, GetOrSetCoeffOf) {
   exp.SetCoeffOf(x2, 1.0f);
   EXPECT_EQ(exp.GetCoeffOf(x2), 1.0f);
 }
+
+TEST(Constraint, Constructor) {
+  Constraint constraint(FLOAT);
+  auto x1 = Variable("x1");
+  constraint.expression = x1;
+  EXPECT_EQ(constraint.ToString(), "1.000000 * x1 + 0.000000 = 0.000000");
+  constraint.SetConstant(1.0f);
+  EXPECT_EQ(constraint.ToString(), "1.000000 * x1 + 1.000000 = 0.000000");
+  constraint.SetCompare(1.0f);
+  EXPECT_EQ(constraint.ToString(), "1.000000 * x1 + 1.000000 = 1.000000");
+  constraint.SetEquationType(Constraint::Type::GE);
+  EXPECT_EQ(constraint.ToString(), "1.000000 * x1 + 1.000000 >= 1.000000");
+}
+
+TEST(OptimizationObject, Constructor) {
+  OptimizationObject obj(FLOAT);
+  auto x1 = Variable("x1");
+  auto x2 = Variable("x2");
+  obj.expression = x1;
+  EXPECT_EQ(obj.ToString(), "min 1.000000 * x1 + 0.000000");
+  obj.expression = x1 + x2;
+  EXPECT_EQ(obj.ToString(), "min 1.000000 * x1 + 1.000000 * x2 + 0.000000");
+  obj.SetOptType(OptimizationObject::Type::MAX);
+  EXPECT_EQ(obj.ToString(), "max 1.000000 * x1 + 1.000000 * x2 + 0.000000");
+}

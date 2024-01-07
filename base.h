@@ -354,3 +354,99 @@ void ReplaceVariableWithExpression(Expression &expression, Variable var,
   expression.SetCoeffOf(var, var.type == FLOAT ? kFloatZero : kIntZero);
   expression += substitution * coeff;
 }
+
+// \sum_{i} c_i * x_i + constant <=/>=/= compare.
+struct Constraint {
+ public:
+  enum Type {
+    LE,  // less than or equal to
+    GE,  // greater than or equal to
+    EQ,  // equal to
+  };
+  Constraint(DataType type) : data_type(type), expression(kFloatZero) {
+    switch (type) {
+      case FLOAT:
+        expression = Expression(kFloatZero);
+        compare = Num(kFloatZero);
+        break;
+      case INTEGER:
+        expression = Expression(kIntZero);
+        compare = Num(kIntZero);
+      default:
+        throw std::runtime_error("Unknown constraint data type");
+    }
+  }
+
+  void SetConstant(Num constant) { expression.constant = constant; }
+  void SetCompare(Num compare) { this->compare = compare; }
+  void SetDataType(DataType type) { this->data_type = type; }
+  void SetEquationType(Type type) { this->equation_type = type; }
+
+  std::string ToString() {
+    std::string ret = expression.ToString() + " ";
+    switch (equation_type) {
+      case LE:
+        ret += "<=";
+        break;
+      case GE:
+        ret += ">=";
+        break;
+      case EQ:
+        ret += "=";
+        break;
+
+      default:
+        break;
+    }
+    ret += " " + compare.ToString();
+    return ret;
+  }
+
+  Expression expression;
+  Num compare;
+  Type equation_type = Type::EQ;
+  DataType data_type;
+};
+
+struct OptimizationObject {
+ public:
+  enum Type {
+    MIN,
+    MAX,
+  };
+
+  OptimizationObject(DataType type) : data_type(type), expression(kFloatZero) {
+    switch (type) {
+      case FLOAT:
+        expression = Expression(kFloatZero);
+        break;
+      case INTEGER:
+        expression = Expression(kIntZero);
+      default:
+        throw std::runtime_error("Unknown opt object data type");
+    }
+  }
+
+  void SetOptType(Type type) { this->opt_type = type; }
+  void SetDataType(DataType type) { this->data_type = type; }
+
+  std::string ToString() {
+    std::string ret = "";
+    switch (opt_type) {
+      case MIN:
+        ret = "min ";
+        break;
+      case MAX:
+        ret = "max ";
+        break;
+
+      default:
+        break;
+    }
+    return ret + expression.ToString();
+  }
+
+  Expression expression;
+  Type opt_type = MIN;
+  DataType data_type;
+};

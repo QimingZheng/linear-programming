@@ -3,54 +3,29 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-TEST(Constraint, Constructor) {
-  Constraint constraint;
-  auto x1 = Variable("x1");
-  constraint.expression = x1;
-  EXPECT_EQ(constraint.ToString(), "1.000000 * x1 + 0.000000 = 0.000000");
-  constraint.SetConstant(1.0f);
-  EXPECT_EQ(constraint.ToString(), "1.000000 * x1 + 1.000000 = 0.000000");
-  constraint.SetCompare(1.0f);
-  EXPECT_EQ(constraint.ToString(), "1.000000 * x1 + 1.000000 = 1.000000");
-  constraint.SetType(Constraint::Type::GE);
-  EXPECT_EQ(constraint.ToString(), "1.000000 * x1 + 1.000000 >= 1.000000");
-}
-
-TEST(OptimizationObject, Constructor) {
-  OptimizationObject obj;
-  auto x1 = Variable("x1");
-  auto x2 = Variable("x2");
-  obj.expression = x1;
-  EXPECT_EQ(obj.ToString(), "min 1.000000 * x1 + 0.000000");
-  obj.expression = x1 + x2;
-  EXPECT_EQ(obj.ToString(), "min 1.000000 * x1 + 1.000000 * x2 + 0.000000");
-  obj.SetType(OptimizationObject::Type::MAX);
-  EXPECT_EQ(obj.ToString(), "max 1.000000 * x1 + 1.000000 * x2 + 0.000000");
-}
-
 TEST(LPModel, AddConstraint) {
   LPModel model;
   Variable x1("x1"), x2("x2");
-  Constraint c1, c2, c3, c4;
+  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT);
   c1.SetCompare(12.0f);
   c1.expression = 2.0f * x1 + x2;
-  c1.SetType(Constraint::Type::LE);
+  c1.SetEquationType(Constraint::Type::LE);
   model.AddConstraint(c1);
   c2.SetCompare(9.0f);
   c2.expression = x1 + 2.0f * x2;
-  c2.SetType(Constraint::Type::LE);
+  c2.SetEquationType(Constraint::Type::LE);
   model.AddConstraint(c2);
   c3.SetCompare(0.0f);
   c3.expression = x1;
-  c3.SetType(Constraint::Type::GE);
+  c3.SetEquationType(Constraint::Type::GE);
   model.AddConstraint(c3);
   c4.SetCompare(0.0f);
   c4.expression = x2;
-  c4.SetType(Constraint::Type::GE);
+  c4.SetEquationType(Constraint::Type::GE);
   model.AddConstraint(c4);
-  OptimizationObject opt;
+  OptimizationObject opt(FLOAT);
   opt.expression = -1.0f * x1 - x2;
-  opt.SetType(OptimizationObject::Type::MIN);
+  opt.SetOptType(OptimizationObject::Type::MIN);
   model.SetOptimizationObject(opt);
 
   EXPECT_EQ(model.ToString(),
@@ -80,26 +55,26 @@ TEST(LPModel, AddConstraint) {
 TEST(LPModel, Pivot) {
   LPModel model;
   Variable x1("x1"), x2("x2");
-  Constraint c1, c2, c3, c4;
+  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT);
   c1.SetCompare(12.0f);
   c1.expression = 2.0f * x1 + 1.0f * x2;
-  c1.SetType(Constraint::Type::LE);
+  c1.SetEquationType(Constraint::Type::LE);
   model.AddConstraint(c1);
   c2.SetCompare(9.0f);
   c2.expression = 1.0f * x1 + 2.0f * x2;
-  c2.SetType(Constraint::Type::LE);
+  c2.SetEquationType(Constraint::Type::LE);
   model.AddConstraint(c2);
   c3.SetCompare(0.0f);
   c3.expression = x1;
-  c3.SetType(Constraint::Type::GE);
+  c3.SetEquationType(Constraint::Type::GE);
   model.AddConstraint(c3);
   c4.SetCompare(0.0f);
   c4.expression = x2;
-  c4.SetType(Constraint::Type::GE);
+  c4.SetEquationType(Constraint::Type::GE);
   model.AddConstraint(c4);
-  OptimizationObject opt;
+  OptimizationObject opt(FLOAT);
   opt.expression = -1.0f * x1 - 1.0f * x2;
-  opt.SetType(OptimizationObject::Type::MIN);
+  opt.SetOptType(OptimizationObject::Type::MIN);
   model.SetOptimizationObject(opt);
   model.ToStandardForm();
   model.ToRelaxedForm();
@@ -130,26 +105,26 @@ TEST(LPModel, Pivot) {
 TEST(LPModel, Solve) {
   LPModel model;
   Variable x1("x1"), x2("x2");
-  Constraint c1, c2, c3, c4;
+  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT);
   c1.SetCompare(12.0f);
   c1.expression = 2.0f * x1 + 1.0f * x2;
-  c1.SetType(Constraint::Type::LE);
+  c1.SetEquationType(Constraint::Type::LE);
   model.AddConstraint(c1);
   c2.SetCompare(9.0f);
   c2.expression = (1.0f * x1) + (2.0f * x2);
-  c2.SetType(Constraint::Type::LE);
+  c2.SetEquationType(Constraint::Type::LE);
   model.AddConstraint(c2);
   c3.SetCompare(0.0f);
   c3.expression = x1;
-  c3.SetType(Constraint::Type::GE);
+  c3.SetEquationType(Constraint::Type::GE);
   model.AddConstraint(c3);
   c4.SetCompare(0.0f);
   c4.expression = x2;
-  c4.SetType(Constraint::Type::GE);
+  c4.SetEquationType(Constraint::Type::GE);
   model.AddConstraint(c4);
-  OptimizationObject opt;
+  OptimizationObject opt(FLOAT);
   opt.expression = -1.0f * x1 - 1.0f * x2;
-  opt.SetType(OptimizationObject::Type::MIN);
+  opt.SetOptType(OptimizationObject::Type::MIN);
   model.SetOptimizationObject(opt);
   model.ToStandardForm();
   model.ToRelaxedForm();
@@ -177,30 +152,30 @@ TEST(LPModel, Initialization) {
    */
   LPModel model;
   Variable x1("x1"), x2("x2");
-  Constraint c1, c2, c3, c4, c5;
+  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT), c5(FLOAT);
   c1.SetCompare(1.0f);
   c1.expression = x1 + x2;
-  c1.SetType(Constraint::Type::GE);
+  c1.SetEquationType(Constraint::Type::GE);
   model.AddConstraint(c1);
   c2.SetCompare(1.0f);
   c2.expression = 2.0f * x1 - x2;
-  c2.SetType(Constraint::Type::GE);
+  c2.SetEquationType(Constraint::Type::GE);
   model.AddConstraint(c2);
   c3.SetCompare(2.0f);
   c3.expression = 3.0f * x2;
-  c3.SetType(Constraint::Type::LE);
+  c3.SetEquationType(Constraint::Type::LE);
   model.AddConstraint(c3);
   c4.SetCompare(0.0f);
   c4.expression = x1;
-  c4.SetType(Constraint::Type::GE);
+  c4.SetEquationType(Constraint::Type::GE);
   model.AddConstraint(c4);
   c5.SetCompare(0.0f);
   c5.expression = x2;
-  c5.SetType(Constraint::Type::GE);
+  c5.SetEquationType(Constraint::Type::GE);
   model.AddConstraint(c5);
-  OptimizationObject opt;
+  OptimizationObject opt(FLOAT);
   opt.expression = (6.0f * x1) + (3.0f * x2);
-  opt.SetType(OptimizationObject::Type::MIN);
+  opt.SetOptType(OptimizationObject::Type::MIN);
   model.SetOptimizationObject(opt);
   model.ToStandardForm();
   model.ToRelaxedForm();

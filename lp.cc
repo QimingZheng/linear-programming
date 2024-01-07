@@ -17,18 +17,18 @@ Variable CreateSubstitutionVariable() {
 }
 void LPModel::ToStandardForm() {
   // Opt obj transform.
-  if (opt_obj_.type == OptimizationObject::Type::MIN) {
+  if (opt_obj_.opt_type == OptimizationObject::Type::MIN) {
     opt_reverted_ = true;
     opt_obj_.expression *= -1.0f;
-    opt_obj_.type = OptimizationObject::Type::MAX;
+    opt_obj_.opt_type = OptimizationObject::Type::MAX;
   }
   std::vector<Constraint> equation_constraint;
   for (auto& constraint : constraints_) {
-    if (constraint.type == Constraint::Type::EQ) {
-      constraint.type = Constraint::Type::GE;
-      Constraint con;
+    if (constraint.equation_type == Constraint::Type::EQ) {
+      constraint.equation_type = Constraint::Type::GE;
+      Constraint con(FLOAT);
       con.SetCompare(constraint.compare);
-      con.SetType(Constraint::Type::LE);
+      con.SetEquationType(Constraint::Type::LE);
       con.expression = constraint.expression;
       equation_constraint.push_back(con);
     }
@@ -39,10 +39,10 @@ void LPModel::ToStandardForm() {
   for (auto& constraint : constraints_) {
     constraint.compare -= constraint.expression.constant;
     constraint.expression.constant = 0.0f;
-    if (constraint.type == Constraint::Type::GE) {
+    if (constraint.equation_type == Constraint::Type::GE) {
       constraint.expression *= -1.0f;
       constraint.compare *= -1.0f;
-      constraint.type = Constraint::Type::LE;
+      constraint.equation_type = Constraint::Type::LE;
     }
   }
   std::set<Variable> positive_vars;
@@ -103,7 +103,7 @@ void LPModel::ToRelaxedForm() {
     auto base_var = CreateBaseVariable();
     constraint.expression = constraint.compare - constraint.expression;
     constraint.compare = 0.0f;
-    constraint.type = Constraint::Type::EQ;
+    constraint.equation_type = Constraint::Type::EQ;
     constraint.expression += -1.0f * base_var;
     base_variables_.insert(base_var);
   }
@@ -160,9 +160,9 @@ LPModel::Result LPModel::Initialize() {
   model.non_base_variables_ = non_base_variables_;
   model.non_base_variables_.insert(artificial_var);
   model.base_variables_ = base_variables_;
-  OptimizationObject obj;
+  OptimizationObject obj(FLOAT);
   obj.expression += -1.0f * artificial_var;
-  obj.SetType(OptimizationObject::MAX);
+  obj.SetOptType(OptimizationObject::MAX);
   model.SetOptimizationObject(obj);
   Num minimum = 0.0f;
   int best = -1;

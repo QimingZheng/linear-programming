@@ -42,9 +42,9 @@ LPModel ParseFile(std::string filename) {
           return kSymbol;
         }
       };
-      Constraint constraint;
+      Constraint constraint(FLOAT);
       Expression expression(0.0f);
-      OptimizationObject obj;
+      OptimizationObject obj(FLOAT);
       bool is_positive = true;
       Num num = 1.0f;
       bool added = true;
@@ -56,9 +56,9 @@ LPModel ParseFile(std::string filename) {
             is_opt_obj = true;
             obj.expression = expression;
             if (field == "min") {
-              obj.SetType(OptimizationObject::MIN);
+              obj.SetOptType(OptimizationObject::MIN);
             } else {
-              obj.SetType(OptimizationObject::MAX);
+              obj.SetOptType(OptimizationObject::MAX);
             }
           } break;
 
@@ -78,11 +78,11 @@ LPModel ParseFile(std::string filename) {
             if (!added) expression.constant = (is_positive ? num : -num);
             constraint.expression = expression;
             if (field == "=") {
-              constraint.SetType(Constraint::Type::EQ);
+              constraint.SetEquationType(Constraint::Type::EQ);
             } else if (field == ">=") {
-              constraint.SetType(Constraint::Type::GE);
+              constraint.SetEquationType(Constraint::Type::GE);
             } else if (field == "<=") {
-              constraint.SetType(Constraint::Type::LE);
+              constraint.SetEquationType(Constraint::Type::LE);
             }
           } break;
 
