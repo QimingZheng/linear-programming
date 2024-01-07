@@ -19,9 +19,7 @@ void LPModel::ToStandardForm() {
   // Opt obj transform.
   if (opt_obj_.type == OptimizationObject::Type::MIN) {
     opt_reverted_ = true;
-    for (auto& entry : opt_obj_.expression.variable_coeff) {
-      entry.second *= -1.0f;
-    }
+    opt_obj_.expression *= -1.0f;
     opt_obj_.type = OptimizationObject::Type::MAX;
   }
   std::vector<Constraint> equation_constraint;
@@ -42,9 +40,7 @@ void LPModel::ToStandardForm() {
     constraint.compare -= constraint.expression.constant;
     constraint.expression.constant = 0.0f;
     if (constraint.type == Constraint::Type::GE) {
-      for (auto& entry : constraint.expression.variable_coeff) {
-        entry.second *= -1.0f;
-      }
+      constraint.expression *= -1.0f;
       constraint.compare *= -1.0f;
       constraint.type = Constraint::Type::LE;
     }
@@ -92,10 +88,8 @@ void LPModel::ToStandardForm() {
     non_base_variables_.erase(var);
     Variable s1 = CreateSubstitutionVariable(),
              s2 = CreateSubstitutionVariable();
-    Expression exp(0.0f);
-    exp.SetCoeffOf(var, 1.0f);
-    exp.SetCoeffOf(s1, -1.0f);
-    exp.SetCoeffOf(s2, 1.0f);
+    Expression exp = 1.0f * s1;
+    exp -= 1.0f * s2;
     for (auto& constraint : constraints_) {
       ReplaceVariableWithExpression(constraint.expression, var, exp);
     }
@@ -107,13 +101,10 @@ void LPModel::ToStandardForm() {
 void LPModel::ToRelaxedForm() {
   for (auto& constraint : constraints_) {
     auto base_var = CreateBaseVariable();
-    for (auto& entry : constraint.expression.variable_coeff) {
-      entry.second *= -1.0f;
-    }
-    constraint.expression.constant = constraint.compare;
+    constraint.expression = constraint.compare - constraint.expression;
     constraint.compare = 0.0f;
     constraint.type = Constraint::Type::EQ;
-    constraint.AddItem(-1.0f, base_var);
+    constraint.expression += -1.0f * base_var;
     base_variables_.insert(base_var);
   }
 }
@@ -125,12 +116,10 @@ void LPModel::Pivot(Variable base, Variable non_base) {
   for (auto& constraint : constraints_) {
     if (constraint.expression.GetCoeffOf(base) != 0.0f and
         constraint.expression.GetCoeffOf(non_base) != 0.0f) {
-      Num dividend(-constraint.expression.GetCoeffOf(non_base));
-      substitution.constant = (constraint.expression.constant / dividend);
-      for (auto entry : constraint.expression.variable_coeff) {
-        if (entry.first != non_base)
-          substitution.SetCoeffOf(entry.first, entry.second / dividend);
-      }
+      auto coeff_of_non_base = constraint.expression.GetCoeffOf(non_base);
+      substitution = constraint.expression;
+      substitution.SetCoeffOf(non_base, 0.0f);
+      substitution /= (-coeff_of_non_base);
       base_variables_.erase(base);
       base_variables_.insert(non_base);
       non_base_variables_.erase(non_base);
@@ -165,14 +154,14 @@ LPModel::Result LPModel::Initialize() {
   LPModel model;
   Variable artificial_var("artificial_variable");
   for (auto constraint : constraints_) {
-    constraint.AddItem(1.0f, artificial_var);
+    constraint.expression += artificial_var;
     model.AddConstraint(constraint);
   }
   model.non_base_variables_ = non_base_variables_;
   model.non_base_variables_.insert(artificial_var);
   model.base_variables_ = base_variables_;
   OptimizationObject obj;
-  obj.AddItem(-1.0f, artificial_var);
+  obj.expression += -1.0f * artificial_var;
   obj.SetType(OptimizationObject::MAX);
   model.SetOptimizationObject(obj);
   Num minimum = 0.0f;

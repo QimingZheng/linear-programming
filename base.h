@@ -281,6 +281,23 @@ Expression operator+(const Expression exp1, const Expression exp2) {
   return exp;
 }
 
+void operator-=(Expression &lhs, const Expression rhs) {
+  for (auto entry : rhs.variable_coeff) {
+    Num lhs_coeff = lhs.GetCoeffOf(entry.first);
+    if (lhs_coeff != kFloatZero and lhs_coeff != kIntZero) {
+      lhs.SetCoeffOf(entry.first, lhs_coeff - entry.second);
+    } else {
+      lhs.SetCoeffOf(entry.first, -1.0f * entry.second);
+    }
+  }
+  lhs.constant -= rhs.constant;
+}
+Expression operator-(const Expression exp1, const Expression exp2) {
+  Expression exp = exp1;
+  exp -= exp2;
+  return exp;
+}
+
 void operator*=(Expression &exp, const Num multiplier) {
   if (multiplier == kIntZero or multiplier == kFloatZero) {
     exp = Expression(multiplier);

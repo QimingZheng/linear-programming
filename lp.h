@@ -28,7 +28,6 @@ struct Constraint {
     EQ,  // equal to
   };
 
-  void AddItem(Num coeff, Variable var) { expression.SetCoeffOf(var, coeff); }
   void SetConstant(Num constant) { expression.constant = constant; }
   void SetCompare(Num compare) { this->compare = compare; }
   void SetType(Type type) { this->type = type; }
@@ -65,7 +64,6 @@ struct OptimizationObject {
     MAX,
   };
 
-  void AddItem(Num coeff, Variable var) { expression.SetCoeffOf(var, coeff); }
   void SetType(Type type) { this->type = type; }
 
   std::string ToString() {
