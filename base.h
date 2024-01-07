@@ -1,3 +1,11 @@
+/*
+ * Created on Sun Jan 07 2023
+ *
+ * Copyright (c) 2024 - Qiming Zheng
+ *
+ * This file defines the interface of basic algebra arithmetic operations.
+ *
+ */
 #pragma once
 
 #include <algorithm>

@@ -1,3 +1,12 @@
+/*
+ * Created on Sun Jan 07 2023
+ *
+ * Copyright (c) 2024 - Qiming Zheng
+ *
+ * This file defines the interface of solving a linear programming problem with
+ * Simplex method (https://en.wikipedia.org/wiki/Simplex_algorithm).
+ *
+ */
 #pragma once
 
 #include <assert.h>
