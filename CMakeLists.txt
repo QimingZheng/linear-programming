@@ -21,7 +21,7 @@ include_directories(base_header base.h)
 add_library(lp_library SHARED lp.cc)
 
 add_executable(solver solver.cc)
-target_include_directories(solver PRIVATE lp_header)
+target_include_directories(solver PRIVATE lp_header base_header)
 target_link_libraries(solver lp_library)
 
 enable_testing()
@@ -30,7 +30,7 @@ add_executable(
   lp_test
   lp_test.cc
 )
-target_include_directories(lp_test PRIVATE lp_header)
+target_include_directories(lp_test PRIVATE lp_header base_header)
 target_link_libraries(
   lp_test
   GTest::GTest

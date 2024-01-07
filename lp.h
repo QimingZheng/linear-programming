@@ -9,105 +9,15 @@
 #include <string>
 #include <vector>
 
-typedef float Num;
+#include "base.h"
 
-const std::string kUndefined = "undefined";
 const std::string kBase = "base";
 const std::string kSubstitution = "subst";
 
-struct Variable {
- public:
-  Variable() { variable_name = kUndefined; }
-  Variable(std::string variable_name) { this->variable_name = variable_name; }
-
-  bool IsUndefined() const { return variable_name == kUndefined; }
-
-  bool IsUserDefined() const {
-    return variable_name.rfind(kBase, 0) != 0 &&
-           variable_name.rfind(kSubstitution, 0) != 0;
-  }
-
-  static Variable CreateBaseVariable() {
-    auto var = Variable(kBase + std::to_string(base_variable_count_));
-    base_variable_count_ += 1;
-    return var;
-  }
-
-  static Variable CreateSubstitutionVariable() {
-    auto var =
-        Variable(kSubstitution + std::to_string(substitution_variable_count_));
-    substitution_variable_count_ += 1;
-    return var;
-  }
-
-  static void Reset() {
-    base_variable_count_ = 0;
-    substitution_variable_count_ = 0;
-  }
-
-  std::string variable_name;
-
-  static int base_variable_count_;
-  static int substitution_variable_count_;
-};
-
-bool operator==(const Variable &lhs, const Variable &rhs) {
-  return lhs.variable_name == rhs.variable_name;
+bool IsUserDefined(Variable var) {
+  return var.variable_name.rfind(kBase, 0) != 0 &&
+         var.variable_name.rfind(kSubstitution, 0) != 0;
 }
-
-bool operator!=(const Variable &lhs, const Variable &rhs) {
-  return lhs.variable_name != rhs.variable_name;
-}
-
-bool operator<(const Variable &lhs, const Variable &rhs) {
-  // TODO: if start with kBase, then should be of lower priority.
-  return lhs.variable_name < rhs.variable_name;
-}
-
-struct Expression {
- public:
-  void SetConstant(Num constant) { this->constant = constant; }
-  void Multiply(Num multiplier) {
-    for (auto &entry : variable_coeff) {
-      entry.second *= multiplier;
-    }
-    constant *= multiplier;
-  }
-  void Add(Expression expression);
-
-  Num GetCoeffOf(Variable var) {
-    if (variable_coeff.find(var) == variable_coeff.end())
-      return 0.0;
-    else
-      return variable_coeff[var];
-  }
-  void SetCoeffOf(Variable var, Num num) {
-    if (num == 0.0) {
-      if (variable_coeff.find(var) != variable_coeff.end())
-        variable_coeff.erase(var);
-    } else {
-      variable_coeff[var] = num;
-    }
-  }
-
-  void ReplaceVariableWithExpression(Variable var, Expression expression);
-
-  std::string ToString() {
-    std::string ret = "";
-    int i = 0;
-    for (auto entry : variable_coeff) {
-      i += 1;
-      ret += std::to_string(entry.second) + " * " + entry.first.variable_name +
-             (i == variable_coeff.size() ? "" : " + ");
-    }
-    if (constant != 0.0)
-      ret += (ret.length() ? " + " : "") + std::to_string(constant);
-    return ret;
-  }
-
-  std::map<Variable, Num> variable_coeff;
-  Num constant = 0.0;
-};
 
 // \sum_{i} c_i * x_i + constant <=/>=/= compare.
 struct Constraint {
@@ -119,7 +29,7 @@ struct Constraint {
   };
 
   void AddItem(Num coeff, Variable var) { expression.SetCoeffOf(var, coeff); }
-  void SetConstant(Num constant) { expression.SetConstant(constant); }
+  void SetConstant(Num constant) { expression.constant = constant; }
   void SetCompare(Num compare) { this->compare = compare; }
   void SetType(Type type) { this->type = type; }
 
@@ -139,12 +49,12 @@ struct Constraint {
       default:
         break;
     }
-    ret += " " + std::to_string(compare);
+    ret += " " + compare.ToString();
     return ret;
   }
 
-  Expression expression;
-  Num compare = 0.0;
+  Expression expression = Expression(0.0f);
+  Num compare = 0.0f;
   Type type = Type::EQ;
 };
 
@@ -174,7 +84,7 @@ struct OptimizationObject {
     return ret + expression.ToString();
   }
 
-  Expression expression;
+  Expression expression = Expression(0.0f);
   Type type = MIN;
 };
 
@@ -186,13 +96,13 @@ class LPModel {
     SOLVED,
   };
 
-  LPModel() { Variable::Reset(); }
+  LPModel() { Reset(); }
 
   void AddConstraint(Constraint constraint) {
     constraints_.push_back(constraint);
   }
   void SetOptimizationObject(OptimizationObject obj) {
-    assert(obj.expression.constant == 0.0);
+    assert(obj.expression.constant == 0.0f);
     opt_obj_ = obj;
   }
 
@@ -224,6 +134,14 @@ class LPModel {
 
   Result Initialize();
 
+  static int base_variable_count_;
+  static int substitution_variable_count_;
+
+  void Reset() {
+    LPModel::base_variable_count_ = 0;
+    LPModel::substitution_variable_count_ = 0;
+  }
+
  private:
   std::vector<Constraint> constraints_;
   OptimizationObject opt_obj_;
@@ -231,3 +149,7 @@ class LPModel {
   std::set<Variable> non_base_variables_;
   bool opt_reverted_ = false;
 };
+
+Variable CreateBaseVariable();
+
+Variable CreateSubstitutionVariable();

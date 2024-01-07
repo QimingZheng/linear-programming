@@ -43,10 +43,10 @@ LPModel ParseFile(std::string filename) {
         }
       };
       Constraint constraint;
-      Expression expression;
+      Expression expression(0.0f);
       OptimizationObject obj;
       bool is_positive = true;
-      Num num = 1.0;
+      Num num = 1.0f;
       bool added = true;
       bool is_opt_obj = false;
       for (auto field : fields) {
@@ -66,7 +66,7 @@ LPModel ParseFile(std::string filename) {
             Variable x(field);
             expression.SetCoeffOf(x, is_positive ? num : -num);
             is_positive = true;
-            num = 1.0;
+            num = 1.0f;
             added = true;
           } break;
 
@@ -75,7 +75,7 @@ LPModel ParseFile(std::string filename) {
             break;
 
           case kCompare: {
-            if (!added) expression.SetConstant(is_positive ? num : -num);
+            if (!added) expression.constant = (is_positive ? num : -num);
             constraint.expression = expression;
             if (field == "=") {
               constraint.SetType(Constraint::Type::EQ);
@@ -87,14 +87,14 @@ LPModel ParseFile(std::string filename) {
           } break;
 
           case kSign: {
-            if (!added) expression.SetConstant(is_positive ? num : -num);
+            if (!added) expression.constant = (is_positive ? num : -num);
             added = false;
             if (field == "+") {
               is_positive = true;
             } else {
               is_positive = false;
             }
-            num = 1.0;
+            num = 1.0f;
           } break;
 
           default:
@@ -125,6 +125,6 @@ int main(int argc, char **argv) {
   model.ToStandardForm();
   model.ToRelaxedForm();
   model.Solve();
-  std::cout << model.GetOptimum() << "\n";
+  std::cout << model.GetOptimum().ToString() << "\n";
   return 0;
 }

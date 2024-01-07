@@ -10,6 +10,7 @@
 #include <vector>
 
 enum DataType {
+  UNKNOWN,
   FLOAT,
   INTEGER,
 };
@@ -44,6 +45,7 @@ bool operator<(const Variable &lhs, const Variable &rhs) {
 
 struct Num {
  public:
+  Num() : type(UNKNOWN) {}
   Num(float val) : type(FLOAT), float_value(val) {}
   Num(int val) : type(INTEGER), int_value(val) {}
 
@@ -112,6 +114,12 @@ void BinaryOp(Num &lhs, const Num rhs, char op) {
               (rhs.type == FLOAT ? rhs.float_value : rhs.int_value);
           return;
 
+        case '-':
+          lhs.float_value =
+              lhs.float_value -
+              (rhs.type == FLOAT ? rhs.float_value : rhs.int_value);
+          return;
+
         default:
           throw std::runtime_error("Unknown binary operator " + op);
       }
@@ -129,6 +137,10 @@ void BinaryOp(Num &lhs, const Num rhs, char op) {
 
         case '/':
           lhs.int_value = lhs.int_value / rhs.int_value;
+          return;
+
+        case '-':
+          lhs.int_value = lhs.int_value - rhs.int_value;
           return;
 
         default:
@@ -176,6 +188,40 @@ Num operator/(const Num lhs, const Num rhs) {
   Num num = lhs;
   num /= rhs;
   return num;
+}
+
+void operator-=(Num &lhs, const Num rhs) {
+  if (lhs.type == INTEGER and rhs.type == FLOAT) {
+    lhs.type = FLOAT;
+    lhs.float_value = lhs.int_value;
+  }
+  BinaryOp(lhs, rhs, '-');
+}
+Num operator-(const Num lhs, const Num rhs) {
+  Num num = lhs;
+  num -= rhs;
+  return num;
+}
+
+bool operator<(const Num lhs, const Num rhs) {
+  float lhs_val = lhs.type == FLOAT ? lhs.float_value : lhs.int_value;
+  float rhs_val = rhs.type == FLOAT ? rhs.float_value : rhs.int_value;
+  return lhs_val < rhs_val;
+}
+bool operator<=(const Num lhs, const Num rhs) {
+  float lhs_val = lhs.type == FLOAT ? lhs.float_value : lhs.int_value;
+  float rhs_val = rhs.type == FLOAT ? rhs.float_value : rhs.int_value;
+  return lhs_val <= rhs_val;
+}
+
+bool operator>(const Num lhs, const Num rhs) { return !(lhs <= rhs); }
+bool operator>=(const Num lhs, const Num rhs) { return !(lhs < rhs); }
+
+Num operator-(const Num num) {
+  Num ret = num;
+  ret.float_value = -ret.float_value;
+  ret.int_value = -ret.int_value;
+  return ret;
 }
 
 struct Expression {
