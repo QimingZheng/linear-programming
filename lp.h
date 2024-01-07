@@ -2,13 +2,6 @@
 
 #include <assert.h>
 
-#include <algorithm>
-#include <iostream>
-#include <map>
-#include <set>
-#include <string>
-#include <vector>
-
 #include "base.h"
 
 const std::string kBase = "base";

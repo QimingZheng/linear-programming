@@ -1,7 +1,5 @@
 #pragma once
 
-#include <assert.h>
-
 #include <algorithm>
 #include <iostream>
 #include <map>
