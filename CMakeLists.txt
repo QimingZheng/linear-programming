@@ -17,6 +17,7 @@ add_library(GTest::GTest INTERFACE IMPORTED)
 target_link_libraries(GTest::GTest INTERFACE gtest_main gmock_main)
 
 include_directories(lp_header lp.h)
+include_directories(base_header base.h)
 add_library(lp_library SHARED lp.cc)
 
 add_executable(solver solver.cc)
@@ -37,6 +38,21 @@ target_link_libraries(
 )
 
 add_test(
-  NAME test
+  NAME lp_test
   COMMAND lp_test
+)
+
+add_executable(
+  base_test
+  base_test.cc
+)
+target_include_directories(base_test PRIVATE base_header)
+target_link_libraries(
+  base_test
+  GTest::GTest
+)
+
+add_test(
+  NAME base_test
+  COMMAND base_test
 )
