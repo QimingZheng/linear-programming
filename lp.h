@@ -45,8 +45,8 @@ class LPModel {
   //      \sum_{i} c_i x_i <= b
   void ToStandardForm();
 
-  // Transform the LP model to the relaxed form:
-  void ToRelaxedForm();
+  // Transform the LP model to the slack form:
+  void ToSlackForm();
 
   Result Solve();
 

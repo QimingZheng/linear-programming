@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
     ilp_model.CuttingPlaneSolve();
   } else {
     lp_model.ToStandardForm();
-    lp_model.ToRelaxedForm();
+    lp_model.ToSlackForm();
     lp_model.Solve();
     std::cout << lp_model.GetOptimum().ToString() << "\n";
     for (auto entry : lp_model.GetSolution()) {

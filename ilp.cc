@@ -31,7 +31,7 @@ ILPModel::Result ILPModel::CuttingPlaneSolve() {
   model.SetOptimizationObject(obj);
 
   model.ToStandardForm();
-  model.ToRelaxedForm();
+  model.ToSlackForm();
   while (true) {
     auto result = model.Solve();
     if (result == NOSOLUTION) return NOSOLUTION;

@@ -45,6 +45,43 @@ TEST(LPModel, ToStandardForm) {
   EXPECT_EQ(model.GetRawVariableExpression(), raw_variable_maps);
 }
 
+TEST(LPModel, ToSlackForm) {
+  LPModel model;
+  Variable x1("x1"), x2("x2");
+  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT);
+  c1.SetCompare(7.0f);
+  c1.expression = x1 + x2;
+  c1.SetEquationType(Constraint::Type::EQ);
+  model.AddConstraint(c1);
+  c2.SetCompare(4.0f);
+  c2.expression = x1 - 2.0f * x2;
+  c2.SetEquationType(Constraint::Type::LE);
+  model.AddConstraint(c2);
+  c3.SetCompare(0.0f);
+  c3.expression = x1;
+  c3.SetEquationType(Constraint::Type::GE);
+  model.AddConstraint(c3);
+  OptimizationObject opt(FLOAT);
+  opt.expression = -2.0f * x1 + 3.0f * x2;
+  opt.SetOptType(OptimizationObject::Type::MIN);
+  model.SetOptimizationObject(opt);
+
+  model.ToStandardForm();
+  model.ToSlackForm();
+
+  EXPECT_EQ(
+      model.ToString(),
+      "max -3.000000 * subst0 + 3.000000 * subst1 + 2.000000 * x1 + -0.000000\n"
+      "-1.000000 * base0 + 1.000000 * subst0 + -1.000000 * subst1 + 1.000000 * "
+      "x1 + -7.000000 = 0.000000\n"
+      "-1.000000 * base1 + 2.000000 * subst0 + -2.000000 * subst1 + -1.000000 "
+      "* x1 + 4.000000 = 0.000000\n"
+      "-1.000000 * base2 + -1.000000 * subst0 + 1.000000 * subst1 + -1.000000 "
+      "* x1 + 7.000000 = 0.000000\n");
+
+  EXPECT_EQ(SlackFormSanityCheck(model), true);
+}
+
 TEST(LPModel, AddConstraint) {
   LPModel model;
   Variable x1("x1"), x2("x2");
@@ -84,7 +121,7 @@ TEST(LPModel, AddConstraint) {
             "2.000000 * x1 + 1.000000 * x2 + 0.000000 <= 12.000000\n"
             "1.000000 * x1 + 2.000000 * x2 + 0.000000 <= 9.000000\n");
 
-  model.ToRelaxedForm();
+  model.ToSlackForm();
 
   EXPECT_EQ(model.ToString(),
             "max 1.000000 * x1 + 1.000000 * x2 + -0.000000\n"
@@ -119,7 +156,7 @@ TEST(LPModel, Pivot) {
   opt.SetOptType(OptimizationObject::Type::MIN);
   model.SetOptimizationObject(opt);
   model.ToStandardForm();
-  model.ToRelaxedForm();
+  model.ToSlackForm();
   EXPECT_EQ(model.ToString(),
             "max 1.000000 * x1 + 1.000000 * x2 + -0.000000\n"
             "-1.000000 * base0 + -2.000000 * x1 + -1.000000 * x2 + 12.000000 = "
@@ -169,7 +206,7 @@ TEST(LPModel, Solve) {
   opt.SetOptType(OptimizationObject::Type::MIN);
   model.SetOptimizationObject(opt);
   model.ToStandardForm();
-  model.ToRelaxedForm();
+  model.ToSlackForm();
 
   EXPECT_EQ(model.Solve(), LPModel::Result::SOLVED);
   EXPECT_EQ(model.ToString(),
@@ -220,7 +257,7 @@ TEST(LPModel, Initialization) {
   opt.SetOptType(OptimizationObject::Type::MIN);
   model.SetOptimizationObject(opt);
   model.ToStandardForm();
-  model.ToRelaxedForm();
+  model.ToSlackForm();
 
   EXPECT_EQ(model.ToString(),
             "max -6.000000 * x1 + -3.000000 * x2 + -0.000000\n"

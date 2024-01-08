@@ -103,7 +103,11 @@ void LPModel::ToStandardForm() {
   }
 }
 
-void LPModel::ToRelaxedForm() {
+/* Suppose the linear programming problem has been formulated in the standard
+ * form, its slack form is in the format of: s = b_i - \sum_{j=1}^{n} a_{ij} xj,
+ * where s is the slack variable.
+ */
+void LPModel::ToSlackForm() {
   for (auto& constraint : constraints_) {
     auto base_var = CreateBaseVariable();
     constraint.expression = constraint.compare - constraint.expression;
@@ -276,21 +280,31 @@ Num LPModel::GetOptimum() {
 }
 
 std::map<Variable, Num> LPModel::GetSolution() {
+  std::map<Variable, Num> all_sol;
   std::map<Variable, Num> sol;
-  for (auto entry : non_base_variables_) {
-    if (IsUserDefined(entry)) {
-      sol[entry] = 0.0f;
-    }
+  for (auto var : non_base_variables_) {
+    all_sol[var] = 0.0f;
+    if (IsUserDefined(var)) sol[var] = 0.0f;
   }
   for (auto base : base_variables_) {
     for (auto constraint : constraints_) {
       if (constraint.expression.GetCoeffOf(base) != 0.0f) {
-        if (IsUserDefined(base)) {
+        all_sol[base] = -constraint.expression.constant /
+                        constraint.expression.GetCoeffOf(base);
+        if (IsUserDefined(base))
           sol[base] = -constraint.expression.constant /
                       constraint.expression.GetCoeffOf(base);
-        }
       }
     }
+  }
+  for (auto entry : raw_variable_expression_) {
+    auto raw_var = entry.first;
+    auto exp = entry.second;
+    while (exp.variable_coeff.size() > 0) {
+      auto entry = *exp.variable_coeff.begin();
+      ReplaceVariableWithExpression(exp, entry.first, all_sol[entry.first]);
+    }
+    sol[raw_var] = exp.constant;
   }
   return sol;
 }
@@ -304,6 +318,26 @@ bool StandardFormSanityCheck(LPModel model) {
     if (model.non_negative_variables_.find(var) ==
         model.non_negative_variables_.end())
       return false;
+  }
+  return true;
+}
+
+bool SlackFormSanityCheck(LPModel model) {
+  std::set<Variable> appeared_vars;
+  for (auto& constraint : model.constraints_) {
+    if (constraint.equation_type != Constraint::Type::EQ) return false;
+    int base_vars = 0;
+    for (auto& entry : constraint.expression.variable_coeff) {
+      if (model.base_variables_.find(entry.first) !=
+          model.base_variables_.end()) {
+        if (appeared_vars.find(entry.first) != appeared_vars.end())
+          return false;
+        appeared_vars.insert(entry.first);
+        if (entry.second != -1.0f) return false;
+        base_vars += 1;
+      }
+    }
+    if (base_vars != 1) return false;
   }
   return true;
 }
