@@ -80,6 +80,10 @@ class LPModel {
   friend bool StandardFormSanityCheck(LPModel model);
   friend bool SlackFormSanityCheck(LPModel model);
 
+  std::map<Variable, Expression> GetRawVariableExpression() {
+    return raw_variable_expression_;
+  }
+
  private:
   std::vector<Constraint> constraints_;
   OptimizationObject opt_obj_;
@@ -89,6 +93,7 @@ class LPModel {
   // The only purpose of this field is used to do sanity check after the
   // standard form transformation.
   std::set<Variable> non_negative_variables_;
+  std::map<Variable, Expression> raw_variable_expression_;
 };
 
 Variable CreateBaseVariable();

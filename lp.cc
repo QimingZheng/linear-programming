@@ -91,6 +91,7 @@ void LPModel::ToStandardForm() {
              s2 = CreateSubstitutionVariable();
     Expression exp = 1.0f * s1;
     exp -= 1.0f * s2;
+    raw_variable_expression_.insert(std::make_pair(var, exp));
     for (auto& constraint : constraints_) {
       ReplaceVariableWithExpression(constraint.expression, var, exp);
     }

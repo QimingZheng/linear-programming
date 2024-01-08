@@ -1,7 +1,7 @@
+#include "lp.h"
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-
-#include "lp.h"
 
 TEST(LPModel, ToStandardForm) {
   LPModel model;
@@ -37,6 +37,12 @@ TEST(LPModel, ToStandardForm) {
       "<= 7.000000\n");
 
   EXPECT_EQ(StandardFormSanityCheck(model), true);
+  Expression exp(FLOAT);
+  exp = Variable("subst0") - Variable("subst1");
+  auto raw_variable_maps = std::map<Variable, Expression>({
+      {x2, exp},
+  });
+  EXPECT_EQ(model.GetRawVariableExpression(), raw_variable_maps);
 }
 
 TEST(LPModel, AddConstraint) {
