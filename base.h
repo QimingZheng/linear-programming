@@ -33,6 +33,13 @@ struct Variable {
 
   bool IsUndefined() const { return variable_name == kUndefined; }
 
+  void To(DataType type) {
+    if (this->type == type) return;
+    this->type = type;
+    if (this->type == UNKNOWN || type == UNKNOWN)
+      throw std::runtime_error("Cannot convert unknown variable type");
+  }
+
   std::string variable_name;
   DataType type;
 };
@@ -72,6 +79,25 @@ struct Num {
         return std::to_string(int_value);
     }
     throw std::runtime_error("Unknown num data type");
+  }
+
+  void To(DataType type) {
+    if (this->type == type) return;
+    this->type = type;
+    if (this->type == UNKNOWN || type == UNKNOWN)
+      throw std::runtime_error("Cannot convert unknown data type");
+    switch (type) {
+      case FLOAT:
+        float_value = int_value;
+        break;
+
+      case INTEGER:
+        int_value = float_value;
+        break;
+
+      default:
+        throw std::runtime_error("Cannot convert unknown num type");
+    }
   }
 
   DataType type;
@@ -372,6 +398,7 @@ struct Constraint {
       case INTEGER:
         expression = Expression(kIntZero);
         compare = Num(kIntZero);
+        break;
       default:
         throw std::runtime_error("Unknown constraint data type");
     }
@@ -422,6 +449,7 @@ struct OptimizationObject {
         break;
       case INTEGER:
         expression = Expression(kIntZero);
+        break;
       default:
         throw std::runtime_error("Unknown opt object data type");
     }

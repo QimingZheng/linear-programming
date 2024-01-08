@@ -17,12 +17,15 @@ add_library(GTest::GTest INTERFACE IMPORTED)
 target_link_libraries(GTest::GTest INTERFACE gtest_main gmock_main)
 
 include_directories(lp_header lp.h)
+include_directories(ilp_header ilp.h)
 include_directories(base_header base.h)
 add_library(lp_library SHARED lp.cc)
+add_library(ilp_library SHARED ilp.cc)
+target_link_libraries(ilp_library lp_library)
 
 add_executable(solver solver.cc)
-target_include_directories(solver PRIVATE lp_header base_header)
-target_link_libraries(solver lp_library)
+target_include_directories(solver PRIVATE ilp_header lp_header base_header)
+target_link_libraries(solver lp_library ilp_library)
 
 enable_testing()
 

@@ -75,6 +75,8 @@ class LPModel {
     LPModel::substitution_variable_count_ = 0;
   }
 
+  friend class ILPModel;
+
  private:
   std::vector<Constraint> constraints_;
   OptimizationObject opt_obj_;
