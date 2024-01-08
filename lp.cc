@@ -15,13 +15,28 @@ Variable CreateSubstitutionVariable() {
   LPModel::substitution_variable_count_ += 1;
   return var;
 }
+
+/*
+ * There four possible reasons that a raw linear programming problem is not in a
+ * standard form:
+ *    1. The objective function might be a minimization rather than a
+ *       maximization.
+ *    2. There might be variables without nonnegativity constraints.
+ *    3. There might be equality constraints, which have an equal sign rather
+ *       than a less-than-or-equal-to sign.
+ *    4. There might be inequality constraints, but instead of having a
+ *       less-than-or-equal-to sign, they have a greater-than-or-equal-to sign.
+ */
 void LPModel::ToStandardForm() {
-  // Opt obj transform.
+  /* Handles the first case: negates all coefficients in the objective function.
+   */
   if (opt_obj_.opt_type == OptimizationObject::Type::MIN) {
     opt_reverted_ = true;
     opt_obj_.expression *= -1.0f;
     opt_obj_.opt_type = OptimizationObject::Type::MAX;
   }
+  /* Handles the thrid case: change a equation (lhs = rhs) into two inequations:
+   * (lhs >= rhs) and (lhs <= rhs). */
   std::vector<Constraint> equation_constraint;
   for (auto& constraint : constraints_) {
     if (constraint.equation_type == Constraint::Type::EQ) {
@@ -36,6 +51,8 @@ void LPModel::ToStandardForm() {
   for (auto constrain : equation_constraint) {
     constraints_.push_back(constrain);
   }
+  /* Handles the fourth case: negates both the lhs and rhs of the inequation,
+   * change `>=` to `<=`. */
   for (auto& constraint : constraints_) {
     constraint.compare -= constraint.expression.constant;
     constraint.expression.constant = 0.0f;
@@ -45,46 +62,30 @@ void LPModel::ToStandardForm() {
       constraint.equation_type = Constraint::Type::LE;
     }
   }
-  std::set<Variable> positive_vars;
-  std::vector<int> positive_con_index;
-  for (int i = 0; i < constraints_.size(); i++) {
-    auto& constraint = constraints_[i];
-    if (constraint.expression.variable_coeff.size() == 1 and
-        constraint.expression.constant == 0.0f) {
-      auto entry = constraint.expression.variable_coeff.begin();
-      if (entry->second < 0.0f) {
-        if (constraint.compare <= 0.0f) {
-          positive_vars.insert(entry->first);
-          positive_con_index.push_back(i);
-        }
-      }
-      /*
-      else {
-        if (constraint.compare >= 0.0) {
-          positive_vars.insert(entry->first);
-          positive_con_index.push_back(i);
-        }
-      }
-      */
-    }
-  }
-  std::reverse(positive_con_index.begin(), positive_con_index.end());
-  for (auto ind : positive_con_index) {
-    constraints_.erase(constraints_.begin() + ind);
-  }
+  /* Handles the second case: suppose xi does not have a corresponding xi >= 0
+   * constraint, then we should replace all occurrence of xi by xi' - xi', and
+   * add non-negativity for xi' and xi'': xi' >= 0, xi'' >= 0. */
   for (auto constraint : constraints_) {
     for (auto entry : constraint.expression.variable_coeff) {
       non_base_variables_.insert(entry.first);
     }
   }
-  std::set<Variable> no_limit_vars;
-  for (auto non_base : non_base_variables_) {
-    if (positive_vars.find(non_base) == positive_vars.end()) {
-      // non_base has no constraints on its positive/negative property.
-      no_limit_vars.insert(non_base);
+  std::set<Variable> negative_vars = non_base_variables_;
+  for (auto var : non_base_variables_) {
+    Constraint con(FLOAT);
+    con.expression -= 1.0f * var;
+    con.equation_type = Constraint::Type::LE;
+    for (int i = 0; i < constraints_.size(); i++) {
+      auto constraint = constraints_[i];
+      if (constraint == con) {
+        negative_vars.erase(var);
+        non_negative_variables_.insert(var);
+        constraints_.erase(constraints_.begin() + i);
+        break;
+      }
     }
   }
-  for (auto var : no_limit_vars) {
+  for (auto var : negative_vars) {
     non_base_variables_.erase(var);
     Variable s1 = CreateSubstitutionVariable(),
              s2 = CreateSubstitutionVariable();
@@ -93,8 +94,11 @@ void LPModel::ToStandardForm() {
     for (auto& constraint : constraints_) {
       ReplaceVariableWithExpression(constraint.expression, var, exp);
     }
+    ReplaceVariableWithExpression(opt_obj_.expression, var, exp);
     non_base_variables_.insert(s1);
     non_base_variables_.insert(s2);
+    non_negative_variables_.insert(s1);
+    non_negative_variables_.insert(s2);
   }
 }
 
@@ -288,4 +292,17 @@ std::map<Variable, Num> LPModel::GetSolution() {
     }
   }
   return sol;
+}
+
+bool StandardFormSanityCheck(LPModel model) {
+  if (model.opt_obj_.opt_type != OptimizationObject::Type::MAX) return false;
+  for (auto constraint : model.constraints_) {
+    if (constraint.equation_type != Constraint::Type::LE) return false;
+  }
+  for (auto var : model.non_base_variables_) {
+    if (model.non_negative_variables_.find(var) ==
+        model.non_negative_variables_.end())
+      return false;
+  }
+  return true;
 }

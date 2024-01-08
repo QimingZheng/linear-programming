@@ -77,14 +77,24 @@ class LPModel {
 
   friend class ILPModel;
 
+  friend bool StandardFormSanityCheck(LPModel model);
+  friend bool SlackFormSanityCheck(LPModel model);
+
  private:
   std::vector<Constraint> constraints_;
   OptimizationObject opt_obj_;
   std::set<Variable> base_variables_;
   std::set<Variable> non_base_variables_;
   bool opt_reverted_ = false;
+  // The only purpose of this field is used to do sanity check after the
+  // standard form transformation.
+  std::set<Variable> non_negative_variables_;
 };
 
 Variable CreateBaseVariable();
 
 Variable CreateSubstitutionVariable();
+
+bool StandardFormSanityCheck(LPModel model);
+
+bool SlackFormSanityCheck(LPModel model);

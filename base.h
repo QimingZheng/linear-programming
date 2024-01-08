@@ -289,6 +289,17 @@ struct Expression {
   Num constant;
 };
 
+bool operator==(const Expression lhs, const Expression rhs) {
+  if (lhs.constant != rhs.constant) return false;
+  if (lhs.variable_coeff.size() != rhs.variable_coeff.size()) return false;
+  for (auto entry : lhs.variable_coeff) {
+    if (rhs.variable_coeff.find(entry.first) == rhs.variable_coeff.end())
+      return false;
+    if (entry.second != rhs.variable_coeff.find(entry.first)->second) return false;
+  }
+  return true;
+}
+
 Expression operator*(const Variable var, const Num num) {
   Expression exp(num.type == FLOAT ? kFloatZero : kIntZero);
   exp.SetCoeffOf(var, num);
@@ -434,6 +445,12 @@ struct Constraint {
   Type equation_type = Type::EQ;
   DataType data_type;
 };
+
+bool operator==(const Constraint lhs, const Constraint rhs) {
+  return (lhs.compare == rhs.compare) and (lhs.expression == rhs.expression) and
+         (lhs.equation_type == rhs.equation_type) and
+         (lhs.data_type == rhs.data_type);
+}
 
 struct OptimizationObject {
  public:
