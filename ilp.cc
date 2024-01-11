@@ -7,7 +7,7 @@ Result ILPModel::BranchAndCutSolve() {
   Num optimal(-100000000.f);
   std::map<Variable, Num> sol;
   problems.push(*this);
-  auto is_integral_solution = [](std::map<Variable, Num> &solution) -> bool {
+  auto is_integral_solution = [](std::map<Variable, Num> solution) -> bool {
     for (auto entry : solution)
       if (abs(entry.second.float_value - int(entry.second.float_value)) >
           1e-6) {
