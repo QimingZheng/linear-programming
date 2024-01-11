@@ -9,6 +9,8 @@
  */
 #pragma once
 
+#include <queue>
+
 #include "base.h"
 #include "lp.h"
 
@@ -24,12 +26,18 @@ class ILPModel {
     opt_obj_ = obj;
   }
 
+  // Solves the integer programming problem with the branch and cut method.
+  // (https://en.wikipedia.org/wiki/Branch_and_cut)
+  Result BranchAndCutSolve();
+
   // Solves the integer programming problem with the cutting plane method.
   // (https://en.wikipedia.org/wiki/Cutting-plane_method)
   Result CuttingPlaneSolve();
 
   Constraint FindGomoryCut(LPModel &model,
                            Constraint non_integral_variable_constraint);
+
+  LPModel ToRelaxedLPModel();
 
   std::string ToString() {
     std::string ret = "";

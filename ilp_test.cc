@@ -1,7 +1,7 @@
-#include "ilp.h"
-
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include "ilp.h"
 
 class MockLPModel : public LPModel {
  public:
@@ -30,4 +30,37 @@ TEST(ILPModel, FindGomoryCut) {
 
   EXPECT_EQ(ilp_model.FindGomoryCut(mock, con).ToString(),
             "-1.000000 * base0 + 0.400000 * x0 + -0.200000 = 0.000000");
+}
+
+TEST(ILPModel, ToRelaxedLPModel) {
+  ILPModel ilp_model;
+  Variable x1("x1", INTEGER), x2("x2", INTEGER), x3("x3", INTEGER);
+  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT), c5(FLOAT);
+  c1.expression = 1.2f * x1 + 2.3f * x2;
+  c1.equation_type = Constraint::Type::LE;
+  c2.expression = x2 + 2.0f * x3;
+  c2.equation_type = Constraint::Type::GE;
+  ilp_model.AddConstraint(c1);
+  ilp_model.AddConstraint(c2);
+  c3.expression = x1;
+  c3.equation_type = Constraint::Type::GE;
+  ilp_model.AddConstraint(c3);
+  c4.expression = x2;
+  c4.equation_type = Constraint::Type::GE;
+  ilp_model.AddConstraint(c4);
+  c5.expression = x3;
+  c5.equation_type = Constraint::Type::GE;
+  ilp_model.AddConstraint(c5);
+  OptimizationObject obj(FLOAT);
+  obj.SetOptType(OptimizationObject::Type::MIN);
+  obj.expression = x1 + x2 + x3;
+  ilp_model.SetOptimizationObject(obj);
+
+  auto lp_model = ilp_model.ToRelaxedLPModel();
+  EXPECT_EQ(lp_model.ToString(),
+            "max -1.000000 * x1 + -1.000000 * x2 + -1.000000 * x3 + -0.000000\n"
+            "-1.000000 * base0 + -1.200000 * x1 + -2.300000 * x2 + 0.000000 = "
+            "0.000000\n"
+            "-1.000000 * base1 + 1.000000 * x2 + 2.000000 * x3 + 0.000000 = "
+            "0.000000\n");
 }
