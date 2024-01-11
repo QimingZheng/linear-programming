@@ -21,14 +21,14 @@ bool IsUserDefined(Variable var) {
          var.variable_name.rfind(kSubstitution, 0) != 0;
 }
 
+enum Result {
+  UNBOUNDED,
+  NOSOLUTION,
+  SOLVED,
+};
+
 class LPModel {
  public:
-  enum Result {
-    UNBOUNDED,
-    NOSOLUTION,
-    SOLVED,
-  };
-
   LPModel() : opt_obj_(OptimizationObject(FLOAT)) { Reset(); }
 
   void AddConstraint(Constraint constraint) {

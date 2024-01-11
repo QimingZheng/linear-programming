@@ -14,12 +14,6 @@
 
 class ILPModel {
  public:
-  enum Result {
-    UNBOUNDED,
-    NOSOLUTION,
-    SOLVED,
-  };
-
   ILPModel() : opt_obj_(OptimizationObject(INTEGER)) {}
 
   void AddConstraint(Constraint constraint) {

@@ -208,7 +208,7 @@ TEST(LPModel, Solve) {
   model.ToStandardForm();
   model.ToSlackForm();
 
-  EXPECT_EQ(model.Solve(), LPModel::Result::SOLVED);
+  EXPECT_EQ(model.Solve(), Result::SOLVED);
   EXPECT_EQ(model.ToString(),
             "max -0.333333 * base0 + -0.333333 * base1 + 7.000000\n"
             "-0.666667 * base0 + 0.333333 * base1 + -1.000000 * x1 + 5.000000 "
@@ -266,7 +266,7 @@ TEST(LPModel, Initialization) {
             "-1.000000 * base1 + 2.000000 * x1 + -1.000000 * x2 + -1.000000 = "
             "0.000000\n"
             "-1.000000 * base2 + -3.000000 * x2 + 2.000000 = 0.000000\n");
-  EXPECT_EQ(model.Initialize(), LPModel::Result::SOLVED);
+  EXPECT_EQ(model.Initialize(), Result::SOLVED);
   EXPECT_EQ(model.ToString(),
             "max -6.000000 * base0 + 3.000000 * x2 + -6.000000\n"
             "1.000000 * base0 + -1.000000 * x1 + -1.000000 * x2 + 1.000000 = "
@@ -275,7 +275,7 @@ TEST(LPModel, Initialization) {
             "= 0.000000\n"
             "-1.000000 * base2 + -3.000000 * x2 + 2.000000 = 0.000000\n");
 
-  EXPECT_EQ(model.Solve(), LPModel::Result::SOLVED);
+  EXPECT_EQ(model.Solve(), Result::SOLVED);
   EXPECT_EQ(model.GetOptimum(), 5.0f);
   auto expected_sol = std::map<Variable, Num>({{x1, 2.0f / 3}, {x2, 1.0f / 3}});
   auto actual_sol = model.GetSolution();

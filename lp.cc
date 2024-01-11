@@ -150,7 +150,7 @@ void LPModel::Pivot(Variable base, Variable non_base) {
   }
 }
 
-LPModel::Result LPModel::Initialize() {
+Result LPModel::Initialize() {
   // Phase 1: If there are negative constants in some constraint, use Pivot
   // method to transform the constrain system to non-negative form.
   bool need_transform = false;
@@ -225,7 +225,7 @@ LPModel::Result LPModel::Initialize() {
   return SOLVED;
 }
 
-LPModel::Result LPModel::Solve() {
+Result LPModel::Solve() {
   auto res = Initialize();
   if (res == NOSOLUTION) return NOSOLUTION;
   for (auto constraint : constraints_) {

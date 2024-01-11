@@ -7,7 +7,7 @@
  *       add it to the raw LP problem.
  *    3. Repeat this process until an all-integer solution is found.
  */
-ILPModel::Result ILPModel::CuttingPlaneSolve() {
+Result ILPModel::CuttingPlaneSolve() {
   LPModel model;
 
   for (auto constraint : constraints_) {

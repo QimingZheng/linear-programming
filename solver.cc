@@ -140,7 +140,7 @@ int main(int argc, char **argv) {
 
   if (is_ilp) {
     auto res = ilp_model.CuttingPlaneSolve();
-    if (res == ILPModel::Result::SOLVED) {
+    if (res == Result::SOLVED) {
       std::cout << ilp_model.GetOptimum().ToString() << "\n";
       for (auto entry : ilp_model.GetSolution()) {
         std::cout << entry.first.ToString() << " = " << entry.second.ToString()
@@ -151,7 +151,7 @@ int main(int argc, char **argv) {
     lp_model.ToStandardForm();
     lp_model.ToSlackForm();
     auto res = lp_model.Solve();
-    if (res == LPModel::Result::SOLVED) {
+    if (res == Result::SOLVED) {
       std::cout << lp_model.GetOptimum().ToString() << "\n";
       for (auto entry : lp_model.GetSolution()) {
         std::cout << entry.first.ToString() << " = " << entry.second.ToString()
