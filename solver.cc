@@ -124,6 +124,8 @@ bool ParseFile(std::string filename, LPModel &lp_model, ILPModel &ilp_model) {
 }
 
 int main(int argc, char **argv) {
+  assert(int(-1.5) == -1);
+  assert(int(1.5) == 1);
   if (argc != 2) {
     std::cout << "usage: " << argv[0] << " input-file\n";
     return -1;
@@ -137,15 +139,24 @@ int main(int argc, char **argv) {
     std::cout << lp_model.ToString();
 
   if (is_ilp) {
-    ilp_model.CuttingPlaneSolve();
+    auto res = ilp_model.CuttingPlaneSolve();
+    if (res == ILPModel::Result::SOLVED) {
+      std::cout << ilp_model.GetOptimum().ToString() << "\n";
+      for (auto entry : ilp_model.GetSolution()) {
+        std::cout << entry.first.ToString() << " = " << entry.second.ToString()
+                  << "\n";
+      }
+    }
   } else {
     lp_model.ToStandardForm();
     lp_model.ToSlackForm();
-    lp_model.Solve();
-    std::cout << lp_model.GetOptimum().ToString() << "\n";
-    for (auto entry : lp_model.GetSolution()) {
-      std::cout << entry.first.ToString() << " = " << entry.second.ToString()
-                << "\n";
+    auto res = lp_model.Solve();
+    if (res == LPModel::Result::SOLVED) {
+      std::cout << lp_model.GetOptimum().ToString() << "\n";
+      for (auto entry : lp_model.GetSolution()) {
+        std::cout << entry.first.ToString() << " = " << entry.second.ToString()
+                  << "\n";
+      }
     }
   }
   return 0;

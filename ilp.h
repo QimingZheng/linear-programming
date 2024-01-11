@@ -30,7 +30,12 @@ class ILPModel {
     opt_obj_ = obj;
   }
 
+  // Solves the integer programming problem with the cutting plane method.
+  // (https://en.wikipedia.org/wiki/Cutting-plane_method)
   Result CuttingPlaneSolve();
+
+  Constraint FindGomoryCut(LPModel &model,
+                           Constraint non_integral_variable_constraint);
 
   std::string ToString() {
     std::string ret = "";
@@ -41,9 +46,15 @@ class ILPModel {
     return ret;
   }
 
+  Num GetOptimum() { return optimum_; }
+
+  std::map<Variable, Num> GetSolution() { return solution_; }
+
  private:
   std::vector<Constraint> constraints_;
   OptimizationObject opt_obj_;
+  Num optimum_;
+  std::map<Variable, Num> solution_;
 };
 
 // TODO: Implement the branch-and-cut method.

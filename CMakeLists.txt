@@ -40,6 +40,22 @@ target_link_libraries(
   lp_library
 )
 
+add_executable(
+  ilp_test
+  ilp_test.cc
+)
+target_include_directories(ilp_test PRIVATE ilp_header lp_header base_header)
+target_link_libraries(
+  ilp_test
+  GTest::GTest
+  ilp_library
+)
+
+add_test(
+  NAME ilp_test
+  COMMAND ilp_test
+)
+
 add_test(
   NAME lp_test
   COMMAND lp_test

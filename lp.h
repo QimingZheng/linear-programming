@@ -45,7 +45,7 @@ class LPModel {
   //      \sum_{i} c_i x_i <= b
   void ToStandardForm();
 
-  // Transform the LP model to the slack form:
+  // Transform the LP model to the slack form.
   void ToSlackForm();
 
   Result Solve();
@@ -74,6 +74,13 @@ class LPModel {
     LPModel::base_variable_count_ = 0;
     LPModel::substitution_variable_count_ = 0;
   }
+
+  // Mark as virtual for the convenience of testing.
+  virtual bool IsBaseVariable(Variable var) {
+    return base_variables_.find(var) != base_variables_.end();
+  }
+  // Mark as virtual for the convenience of testing.
+  virtual void AddBaseVariable(Variable var) { base_variables_.insert(var); }
 
   friend class ILPModel;
 
