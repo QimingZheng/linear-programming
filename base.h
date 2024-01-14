@@ -295,7 +295,8 @@ bool operator==(const Expression lhs, const Expression rhs) {
   for (auto entry : lhs.variable_coeff) {
     if (rhs.variable_coeff.find(entry.first) == rhs.variable_coeff.end())
       return false;
-    if (entry.second != rhs.variable_coeff.find(entry.first)->second) return false;
+    if (entry.second != rhs.variable_coeff.find(entry.first)->second)
+      return false;
   }
   return true;
 }

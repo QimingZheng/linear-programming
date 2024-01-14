@@ -22,13 +22,13 @@ class ILPModel {
     constraints_.push_back(constraint);
   }
   void SetOptimizationObject(OptimizationObject obj) {
-    assert(obj.expression.constant == kIntZero);
+    // assert(obj.expression.constant == kIntZero);
     opt_obj_ = obj;
   }
 
   // Solves the integer programming problem with the branch and cut method.
-  // (https://en.wikipedia.org/wiki/Branch_and_cut)
-  Result BranchAndCutSolve();
+  // (https://en.wikipedia.org/wiki/Branch_and_bound)
+  Result BranchAndBoundSolve();
 
   // Solves the integer programming problem with the cutting plane method.
   // (https://en.wikipedia.org/wiki/Cutting-plane_method)

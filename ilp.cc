@@ -1,27 +1,36 @@
 #include "ilp.h"
 
-Result ILPModel::BranchAndCutSolve() {
+Result ILPModel::BranchAndBoundSolve() {
   std::queue<ILPModel> problems;
 
   Result result = NOSOLUTION;
   Num optimal(-100000000.f);
   std::map<Variable, Num> sol;
   problems.push(*this);
-  auto is_integral_solution = [](std::map<Variable, Num> solution) -> bool {
-    for (auto entry : solution)
-      if (abs(entry.second.float_value - int(entry.second.float_value)) >
-          1e-6) {
+  auto is_integral = [](float x) -> bool { return abs(x - int(x)) < 1e-6; };
+  std::set<Variable> interger_vars;
+  for (auto constraint : constraints_) {
+    for (auto entry : constraint.expression.variable_coeff)
+      interger_vars.insert(entry.first);
+  }
+  auto is_integral_solution = [&](std::map<Variable, Num> solution) -> bool {
+    for (auto entry : solution) {
+      auto var = entry.first;
+      var.To(INTEGER);
+      if (interger_vars.find(var) == interger_vars.end()) continue;
+      if (!is_integral(entry.second.float_value)) {
         return false;
       }
+    }
     return true;
   };
   while (!problems.empty()) {
     auto sub_problem = problems.front();
     problems.pop();
     auto relaxed_sub_problem = sub_problem.ToRelaxedLPModel();
-    auto result = relaxed_sub_problem.Solve();
-    if (result == NOSOLUTION) continue;
-    if (result == UNBOUNDED) return UNBOUNDED;
+    auto sub_result = relaxed_sub_problem.Solve();
+    if (sub_result == NOSOLUTION) continue;
+    if (sub_result == UNBOUNDED) return UNBOUNDED;
     if (relaxed_sub_problem.GetOptimum() < optimal) continue;
     if (is_integral_solution(relaxed_sub_problem.GetSolution())) {
       optimal = relaxed_sub_problem.GetOptimum();
@@ -31,11 +40,30 @@ Result ILPModel::BranchAndCutSolve() {
     }
     // The optimal solution of this sub problem is better than the optimal so
     // far, need to split it into more sub-problems.
+    for (auto entry : relaxed_sub_problem.GetSolution()) {
+      if (!is_integral(entry.second.float_value)) {
+        auto var = entry.first;
+        var.To(INTEGER);
+        Constraint c1(INTEGER), c2(INTEGER);
+        c1.expression = var - Num(int(entry.second.float_value));
+        c1.equation_type = Constraint::Type::LE;
+        c2.expression = var - Num(int(entry.second.float_value) + 1);
+        c2.equation_type = Constraint::Type::GE;
+        auto sub_problem_1 = sub_problem, sub_problem_2 = sub_problem;
+        sub_problem_1.AddConstraint(c1);
+        sub_problem_2.AddConstraint(c2);
+        problems.push(sub_problem_1);
+        problems.push(sub_problem_2);
+        break;
+      }
+    }
   }
+  optimum_ = optimal;
+  solution_ = sol;
   return result;
 }
 
-/* The general steps of cutting plan method:
+/* The general steps of cutting plane method:
  *    1. Convert the raw problem into relaxed form without integer constraints
  *       and solve it with normal LP solver.
  *    2. If there are non-integers in the solution, find a linear constraint and
@@ -100,8 +128,10 @@ LPModel ILPModel::ToRelaxedLPModel() {
   LPModel model;
 
   for (auto constraint : constraints_) {
-    constraint.SetDataType(FLOAT);
-    constraint.compare.To(FLOAT);
+    auto con = Constraint(FLOAT);
+    con.equation_type = constraint.equation_type;
+    con.compare = constraint.compare;
+    con.compare.To(FLOAT);
     Expression exp(FLOAT);
     for (auto &entry : constraint.expression.variable_coeff) {
       Variable var = entry.first;
@@ -112,7 +142,8 @@ LPModel ILPModel::ToRelaxedLPModel() {
     }
     exp.constant = constraint.expression.constant;
     exp.constant.To(FLOAT);
-    model.AddConstraint(constraint);
+    con.expression = exp;
+    model.AddConstraint(con);
   }
   OptimizationObject obj(FLOAT);
   for (auto &entry : opt_obj_.expression.variable_coeff) {

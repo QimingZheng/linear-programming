@@ -35,7 +35,7 @@ class LPModel {
     constraints_.push_back(constraint);
   }
   void SetOptimizationObject(OptimizationObject obj) {
-    assert(obj.expression.constant == 0.0f);
+    assert(obj.expression.constant == kFloatZero);
     opt_obj_ = obj;
   }
 

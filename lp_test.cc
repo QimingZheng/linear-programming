@@ -286,3 +286,50 @@ TEST(LPModel, Initialization) {
     EXPECT_GE(entry.second - actual_sol[entry.first], -1e-6f);
   }
 }
+
+TEST(LPModel, GetSolution) {
+  LPModel model;
+  Variable x1("x1"), x2("x2");
+  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT);
+  c1.expression = x1 + x2;
+  c1.equation_type = Constraint::Type::LE;
+  c1.compare = 5.0f;
+  c2.expression = 10.0f * x1 + 6.0f * x2;
+  c2.equation_type = Constraint::Type::LE;
+  c2.compare = 45.0f;
+  model.AddConstraint(c1);
+  model.AddConstraint(c2);
+  c3.expression = x1;
+  c3.equation_type = Constraint::Type::GE;
+  model.AddConstraint(c3);
+  c4.expression = x2;
+  c4.equation_type = Constraint::Type::GE;
+  model.AddConstraint(c4);
+  OptimizationObject obj(FLOAT);
+  obj.SetOptType(OptimizationObject::Type::MAX);
+  obj.expression = 5.0f * x1 + 4.0f * x2;
+  EXPECT_EQ(obj.expression.constant, kFloatZero);
+  model.SetOptimizationObject(obj);
+
+  model.ToStandardForm();
+  model.ToSlackForm();
+
+  EXPECT_EQ(model.ToString(),
+            "max 5.000000 * x1 + 4.000000 * x2 + 0.000000\n"
+            "-1.000000 * base0 + -1.000000 * x1 + -1.000000 * x2 + 5.000000 = "
+            "0.000000\n"
+            "-1.000000 * base1 + -10.000000 * x1 + -6.000000 * x2 + 45.000000 "
+            "= 0.000000\n");
+
+  model.Solve();
+
+  auto expected_sol = std::map<Variable, Num>({{x1, 3.75f}, {x2, 1.25f}});
+
+  EXPECT_EQ(model.GetOptimum(), 23.75f);
+  auto actual_sol = model.GetSolution();
+  for (auto entry : expected_sol) {
+    EXPECT_EQ(actual_sol.find(entry.first) != actual_sol.end(), true);
+    EXPECT_LE(entry.second - actual_sol[entry.first], 1e-6f);
+    EXPECT_GE(entry.second - actual_sol[entry.first], -1e-6f);
+  }
+}
