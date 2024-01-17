@@ -14,6 +14,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <math.h>
 
 enum DataType {
   UNKNOWN,
@@ -35,9 +36,9 @@ struct Variable {
 
   void To(DataType type) {
     if (this->type == type) return;
-    this->type = type;
     if (this->type == UNKNOWN || type == UNKNOWN)
       throw std::runtime_error("Cannot convert unknown variable type");
+    this->type = type;
   }
 
   std::string variable_name;

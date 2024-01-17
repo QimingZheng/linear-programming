@@ -7,7 +7,7 @@ Result ILPModel::BranchAndBoundSolve() {
   Num optimal(-100000000.f);
   std::map<Variable, Num> sol;
   problems.push(*this);
-  auto is_integral = [](float x) -> bool { return abs(x - int(x)) < 1e-6; };
+  auto is_integral = [](float x) -> bool { return fabs(x - int(x)) < 1e-6; };
   std::set<Variable> interger_vars;
   for (auto constraint : constraints_) {
     for (auto entry : constraint.expression.variable_coeff)
