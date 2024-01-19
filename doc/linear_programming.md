@@ -109,10 +109,14 @@ $\begin{align}
 在从辅助线性规划转化到原来的线性规划的过程中，如果${{x}_{0}}$已经是非基变量，则可以将其从约束条件和目标函数中直接去掉。否则，需要任取一个非基变量${{x}_{e}}$执行pivot(0, e)，将${{x}_{0}}$变为非基变量。由于此时${{x}_{0}}$是基变量且${{x}_{0}}=0$，故${{b}_{0}}=0$一定成立，因此这个转轴操作不会破坏b向量的非负性。原问题优化目标函数中的基变量替换成对应的非基变量替换式后即可求解原问题。
 
 
+## 对偶单纯形法算法
+
+见Introduction to Linear Optimization 4.5节
+
 ## References
 
 1. https://en.wikipedia.org/wiki/Simplex_algorithm
 2. https://zh.wikipedia.org/zh-hans/%E5%8D%95%E7%BA%AF%E5%BD%A2%E6%B3%95
 3. [Introduction to Algorithms, 3rd edition. Linear Programming](./doc/linear-programming.pdf)
 4. https://stackoverflow.com/questions/58964951/simplex-algorithm-initialize-simplex
-
+5. [Introduction to Linear Optimization](./Introduction%20to%20Linear%20Optimization.pdf)

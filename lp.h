@@ -15,6 +15,7 @@
 
 const std::string kBase = "base";
 const std::string kSubstitution = "subst";
+const std::string kDual = "dual";
 
 bool IsUserDefined(Variable var) {
   return var.variable_name.rfind(kBase, 0) != 0 &&
@@ -50,7 +51,11 @@ class LPModel {
 
   Result Solve();
 
+  Result DualSolve(std::set<Variable> dual_feasible_solution_basis);
+
   Num GetOptimum();
+
+  Num GetDualSolveOptimum();
 
   std::map<Variable, Num> GetSolution();
 
@@ -69,16 +74,19 @@ class LPModel {
 
   static int base_variable_count_;
   static int substitution_variable_count_;
+  static int dual_variable_count_;
 
   void Reset() {
     LPModel::base_variable_count_ = 0;
     LPModel::substitution_variable_count_ = 0;
+    LPModel::dual_variable_count_ = 0;
   }
 
   // Mark as virtual for the convenience of testing.
   virtual bool IsBaseVariable(Variable var) {
     return base_variables_.find(var) != base_variables_.end();
   }
+  std::set<Variable> GetBaseVariables() { return base_variables_; }
   // Mark as virtual for the convenience of testing.
   virtual void AddBaseVariable(Variable var) { base_variables_.insert(var); }
 
@@ -90,6 +98,14 @@ class LPModel {
   std::map<Variable, Expression> GetRawVariableExpression() {
     return raw_variable_expression_;
   }
+
+  // Transform the model to its dual form:
+  // https://en.wikipedia.org/wiki/Dual_linear_program#Form_of_the_dual_LP
+  LPModel ToDualForm();
+
+  // Perform gaussian elimination on the slack form, and make the coefficients
+  // of the base-variables forms an identity matrix.
+  void GaussianElimination(std::set<Variable> base_variables);
 
  private:
   // Check if the constraint is in the form of: x >= 0
@@ -108,6 +124,8 @@ class LPModel {
 Variable CreateBaseVariable();
 
 Variable CreateSubstitutionVariable();
+
+Variable CreateDualVariable();
 
 bool StandardFormSanityCheck(LPModel model);
 

@@ -2,6 +2,7 @@
 
 int LPModel::base_variable_count_ = 0;
 int LPModel::substitution_variable_count_ = 0;
+int LPModel::dual_variable_count_ = 0;
 
 Variable CreateBaseVariable() {
   auto var = Variable(kBase + std::to_string(LPModel::base_variable_count_));
@@ -13,6 +14,12 @@ Variable CreateSubstitutionVariable() {
   auto var = Variable(kSubstitution +
                       std::to_string(LPModel::substitution_variable_count_));
   LPModel::substitution_variable_count_ += 1;
+  return var;
+}
+
+Variable CreateDualVariable() {
+  auto var = Variable(kDual + std::to_string(LPModel::dual_variable_count_));
+  LPModel::dual_variable_count_ += 1;
   return var;
 }
 
@@ -350,4 +357,149 @@ bool LPModel::IsNonNegativeConstraint(const Constraint& constraint) {
   if (constraint.expression.variable_coeff.begin()->second != Num(-1.0f))
     return false;
   return true;
+}
+
+LPModel LPModel::ToDualForm() {
+  // The primal LP should be in standard form:
+  //  max c^T x
+  //  s.t.
+  //    Ax <= b
+  //    x >= 0
+  assert(StandardFormSanityCheck(*this) == true);
+  LPModel dual;
+  // The dual LP:
+  //  min b^T y
+  //  s.t.
+  //    A^T y >= c
+  //    y >= 0
+  std::vector<Variable> ys;
+  for (auto con : constraints_) {
+    Variable y = CreateDualVariable();
+    ys.push_back(y);
+    dual.opt_obj_.expression += con.compare * y;
+  }
+  dual.opt_obj_.opt_type = OptimizationObject::Type::MIN;
+  for (auto variable : non_base_variables_) {
+    Constraint con(FLOAT);
+    con.equation_type = Constraint::Type::GE;
+    con.compare = opt_obj_.expression.GetCoeffOf(variable);
+    for (int i = 0; i < constraints_.size(); i++) {
+      con.expression += constraints_[i].expression.GetCoeffOf(variable) * ys[i];
+    }
+    dual.AddConstraint(con);
+  }
+  for (auto y : ys) {
+    Constraint con(FLOAT);
+    con.equation_type = Constraint::Type::GE;
+    con.expression = 1.0f * y;
+    dual.AddConstraint(con);
+  }
+  return dual;
+}
+
+void LPModel::GaussianElimination(std::set<Variable> base_variables) {
+  for (auto con : constraints_) {
+    assert(con.compare == kFloatZero);
+    assert(con.equation_type == Constraint::Type::EQ);
+  }
+  for (auto base : base_variables) {
+    for (int i = 0; i < constraints_.size(); i++) {
+      Constraint& con = constraints_[i];
+      if (con.expression.GetCoeffOf(base) == kFloatZero) continue;
+      con.expression *= (1.0f / con.expression.GetCoeffOf(base));
+      for (auto& c : constraints_) {
+        if (c == con) continue;
+        c.expression -= (con.expression * c.expression.GetCoeffOf(base));
+      }
+      break;
+    }
+  }
+}
+
+Result LPModel::DualSolve(std::set<Variable> dual_feasible_solution_basis) {
+  // Dual solve requires the optimization objective function in minimization
+  // form:
+  if (opt_obj_.opt_type == OptimizationObject::MAX) {
+    for (auto& entry : opt_obj_.expression.variable_coeff) {
+      entry.second *= -1.0f;
+    }
+    opt_obj_.SetOptType(OptimizationObject::MIN);
+    opt_reverted_ = !opt_reverted_;
+  }
+  for (auto base : base_variables_) non_base_variables_.insert(base);
+  base_variables_ = dual_feasible_solution_basis;
+  for (auto base : base_variables_) {
+    if (non_base_variables_.find(base) != non_base_variables_.end())
+      non_base_variables_.erase(base);
+  }
+  GaussianElimination(dual_feasible_solution_basis);
+  while (true) {
+    bool found_optimal = true;
+    Variable b;
+    Num val = kFloatZero;
+    Constraint c(FLOAT);
+    for (auto con : constraints_) {
+      for (auto base : base_variables_) {
+        if (con.expression.GetCoeffOf(base) != kFloatZero) {
+          assert(con.expression.GetCoeffOf(base) == kFloatOne);
+          if (val >
+              -con.expression.constant / con.expression.GetCoeffOf(base)) {
+            found_optimal = false;
+            b = base;
+            val = -con.expression.constant / con.expression.GetCoeffOf(base);
+            c = con;
+          }
+        }
+      }
+    }
+    if (found_optimal) break;
+
+    val = Num(1000000000000.0f);
+    Variable n;
+    for (auto entry : c.expression.variable_coeff) {
+      if (entry.first == b) continue;
+      if (entry.second < kFloatZero) {
+        Num r = opt_obj_.expression.GetCoeffOf(entry.first);
+        for (auto e : base_variables_) {
+          for (auto con : constraints_) {
+            if (con.expression.GetCoeffOf(e) != kFloatZero) {
+              r -= opt_obj_.expression.GetCoeffOf(e) *
+                   con.expression.GetCoeffOf(entry.first);
+            }
+          }
+        }
+        if ((r / (-entry.second)) < val) {
+          val = r / (-entry.second);
+          n = entry.first;
+        }
+      }
+    }
+    if (n.IsUndefined()) return UNBOUNDED;
+    for (auto& con : constraints_) {
+      if (con == c) {
+        con.expression *= 1.0f / c.expression.GetCoeffOf(n);
+        c = con;
+        break;
+      }
+    }
+    for (auto& con : constraints_) {
+      if (con == c) continue;
+      con.expression -= con.expression.GetCoeffOf(n) * c.expression;
+    }
+    base_variables_.erase(b);
+    base_variables_.insert(n);
+    non_base_variables_.erase(n);
+    non_base_variables_.insert(b);
+  }
+  return SOLVED;
+}
+
+Num LPModel::GetDualSolveOptimum() {
+  auto sol = GetSolution();
+  Num ret(FLOAT);
+  for (auto entry : sol) {
+    ret += entry.second * opt_obj_.expression.GetCoeffOf(entry.first);
+  }
+  if (opt_reverted_) ret = -ret;
+  return ret;
 }

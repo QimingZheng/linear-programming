@@ -333,3 +333,212 @@ TEST(LPModel, GetSolution) {
     EXPECT_GE(entry.second - actual_sol[entry.first], -1e-6f);
   }
 }
+
+TEST(LPModel, ToDualForm) {
+  LPModel model;
+  Variable x1("x1"), x2("x2");
+  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT), c5(FLOAT);
+  c1.expression = 1.0f * x1 + 2.0f * x2;
+  c1.equation_type = Constraint::Type::LE;
+  c1.compare = 8.0f;
+  c2.expression = 4.0f * x1;
+  c2.equation_type = Constraint::Type::LE;
+  c2.compare = 16.0f;
+  c3.expression = 4.0f * x2;
+  c3.equation_type = Constraint::Type::LE;
+  c3.compare = 12.0f;
+  model.AddConstraint(c1);
+  model.AddConstraint(c2);
+  model.AddConstraint(c3);
+  c4.expression = x1;
+  c4.equation_type = Constraint::Type::GE;
+  model.AddConstraint(c4);
+  c5.expression = x2;
+  c5.equation_type = Constraint::Type::GE;
+  model.AddConstraint(c5);
+  OptimizationObject obj(FLOAT);
+  obj.SetOptType(OptimizationObject::Type::MAX);
+  obj.expression = 2.0f * x1 + 3.0f * x2;
+  EXPECT_EQ(obj.expression.constant, kFloatZero);
+  model.SetOptimizationObject(obj);
+
+  model.ToStandardForm();
+  auto dual = model.ToDualForm();
+
+  EXPECT_EQ(dual.ToString(),
+            "min 8.000000 * dual0 + 16.000000 * dual1 + 12.000000 * dual2 + "
+            "0.000000\n"
+            "1.000000 * dual0 + 4.000000 * dual1 + 0.000000 >= 2.000000\n"
+            "2.000000 * dual0 + 4.000000 * dual2 + 0.000000 >= 3.000000\n"
+            "1.000000 * dual0 + 0.000000 >= 0.000000\n"
+            "1.000000 * dual1 + 0.000000 >= 0.000000\n"
+            "1.000000 * dual2 + 0.000000 >= 0.000000\n");
+}
+
+TEST(LPModel, GaussianElimination) {
+  LPModel model;
+  Variable x1("x1"), x2("x2");
+  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT), c5(FLOAT);
+  c1.expression = 1.0f * x1 + 2.0f * x2;
+  c1.equation_type = Constraint::Type::LE;
+  c1.compare = 8.0f;
+  c2.expression = 4.0f * x1;
+  c2.equation_type = Constraint::Type::LE;
+  c2.compare = 16.0f;
+  c3.expression = 4.0f * x2;
+  c3.equation_type = Constraint::Type::LE;
+  c3.compare = 12.0f;
+  model.AddConstraint(c1);
+  model.AddConstraint(c2);
+  model.AddConstraint(c3);
+  c4.expression = x1;
+  c4.equation_type = Constraint::Type::GE;
+  model.AddConstraint(c4);
+  c5.expression = x2;
+  c5.equation_type = Constraint::Type::GE;
+  model.AddConstraint(c5);
+  OptimizationObject obj(FLOAT);
+  obj.SetOptType(OptimizationObject::Type::MAX);
+  obj.expression = 2.0f * x1 + 3.0f * x2;
+  EXPECT_EQ(obj.expression.constant, kFloatZero);
+  model.SetOptimizationObject(obj);
+
+  model.ToStandardForm();
+  model.ToSlackForm();
+
+  std::set<Variable> vars = {x1};
+  model.GaussianElimination(vars);
+  EXPECT_EQ(model.ToString(),
+            "max 2.000000 * x1 + 3.000000 * x2 + 0.000000\n"
+            "1.000000 * base0 + 1.000000 * x1 + 2.000000 * x2 + -8.000000 = "
+            "0.000000\n"
+            "4.000000 * base0 + -1.000000 * base1 + 8.000000 * x2 + -16.000000 "
+            "= 0.000000\n"
+            "-1.000000 * base2 + -4.000000 * x2 + 12.000000 = 0.000000\n");
+
+  vars = {x2};
+  model.GaussianElimination(vars);
+  EXPECT_EQ(model.ToString(),
+            "max 2.000000 * x1 + 3.000000 * x2 + 0.000000\n"
+            "0.500000 * base0 + 0.500000 * x1 + 1.000000 * x2 + -4.000000 = "
+            "0.000000\n"
+            "-1.000000 * base1 + -4.000000 * x1 + 16.000000 = 0.000000\n"
+            "2.000000 * base0 + -1.000000 * base2 + 2.000000 * x1 + -4.000000 "
+            "= 0.000000\n");
+}
+
+TEST(LPModel, DualSolve) {
+  LPModel model;
+  Variable x1("x1"), x2("x2");
+  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT), c5(FLOAT);
+  c1.expression = 1.0f * x1 + 2.0f * x2;
+  c1.equation_type = Constraint::Type::LE;
+  c1.compare = 1.0f;
+  c2.expression = 4.0f * x1;
+  c2.equation_type = Constraint::Type::LE;
+  c2.compare = 10.0f;
+  c3.expression = 4.0f * x2;
+  c3.equation_type = Constraint::Type::LE;
+  c3.compare = 9.0f;
+  model.AddConstraint(c1);
+  model.AddConstraint(c2);
+  model.AddConstraint(c3);
+  c4.expression = x1;
+  c4.equation_type = Constraint::Type::GE;
+  model.AddConstraint(c4);
+  c5.expression = x2;
+  c5.equation_type = Constraint::Type::GE;
+  model.AddConstraint(c5);
+  OptimizationObject obj(FLOAT);
+  obj.SetOptType(OptimizationObject::Type::MAX);
+  obj.expression = 2.0f * x1 + 3.0f * x2;
+  EXPECT_EQ(obj.expression.constant, kFloatZero);
+  model.SetOptimizationObject(obj);
+
+  model.ToStandardForm();
+  model.ToSlackForm();
+
+  auto result = model.Solve();
+  EXPECT_EQ(result, SOLVED);
+
+  auto base_variables = model.GetBaseVariables();
+
+  LPModel raw_model;
+  raw_model.SetOptimizationObject(obj);
+  c1.compare = 8.0f;
+  c2.compare = 16.0f;
+  c3.compare = 12.0f;
+  raw_model.AddConstraint(c1);
+  raw_model.AddConstraint(c2);
+  raw_model.AddConstraint(c3);
+  raw_model.AddConstraint(c4);
+  raw_model.AddConstraint(c5);
+
+  raw_model.ToStandardForm();
+  raw_model.ToSlackForm();
+  result = raw_model.DualSolve(base_variables);
+  EXPECT_EQ(result, SOLVED);
+
+  auto expected_sol = std::map<Variable, Num>({{x1, 4.0f}, {x2, 2.0f}});
+  auto actual_sol = raw_model.GetSolution();
+  for (auto entry : expected_sol) {
+    EXPECT_EQ(actual_sol.find(entry.first) != actual_sol.end(), true);
+    EXPECT_LE(entry.second - actual_sol[entry.first], 1e-6f);
+    EXPECT_GE(entry.second - actual_sol[entry.first], -1e-6f);
+  }
+}
+
+TEST(LPModel, DualSolve2) {
+  LPModel model;
+  Variable x1("x1"), x2("x2"), x3("x3"), x4("x4");
+  Variable b0("base0"), b1("base1"), b2("base2");
+  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT), c5(FLOAT), c6(FLOAT),
+      c7(FLOAT);
+  c1.expression = 1000.0f * x1 + 1500.0f * x2 + 1750.0f * x3 + 3250.0f * x4;
+  c1.equation_type = Constraint::Type::GE;
+  c1.compare = 4000.0f;
+  c2.expression = .6f * x1 + .27f * x2 + .68f * x3 + .3f * x4;
+  c2.equation_type = Constraint::Type::GE;
+  c2.compare = 1.0f;
+  c3.expression = 17.5f * x1 + 7.7f * x2 + 30.0f * x4;
+  c3.equation_type = Constraint::Type::GE;
+  c3.compare = 30.0f;
+  model.AddConstraint(c1);
+  model.AddConstraint(c2);
+  model.AddConstraint(c3);
+  c4.expression = x1;
+  c4.equation_type = Constraint::Type::GE;
+  model.AddConstraint(c4);
+  c5.expression = x2;
+  c5.equation_type = Constraint::Type::GE;
+  model.AddConstraint(c5);
+  c6.expression = x3;
+  c6.equation_type = Constraint::Type::GE;
+  model.AddConstraint(c6);
+  c7.expression = x4;
+  c7.equation_type = Constraint::Type::GE;
+  model.AddConstraint(c7);
+  OptimizationObject obj(FLOAT);
+  obj.SetOptType(OptimizationObject::Type::MIN);
+  obj.expression = .8f * x1 + .5f * x2 + .9f * x3 + 1.5f * x4;
+  EXPECT_EQ(obj.expression.constant, kFloatZero);
+  model.SetOptimizationObject(obj);
+
+  model.ToStandardForm();
+  model.ToSlackForm();
+
+  auto result = model.DualSolve({b0, b1, b2});
+  EXPECT_EQ(result, SOLVED);
+  EXPECT_LE(model.GetDualSolveOptimum() - Num(2.685733f), 1e-6f);
+  EXPECT_GE(model.GetDualSolveOptimum() - Num(2.685733f), -1e-6f);
+
+  auto expected_sol = std::map<Variable, Num>(
+      {{x1, 0.704872f}, {x2, 2.074765f}, {x3, 0.0f}, {x4, 0.056302f}});
+  auto actual_sol = model.GetSolution();
+
+  for (auto entry : expected_sol) {
+    EXPECT_EQ(actual_sol.find(entry.first) != actual_sol.end(), true);
+    EXPECT_LE(entry.second - actual_sol[entry.first], 1e-6f);
+    EXPECT_GE(entry.second - actual_sol[entry.first], -1e-6f);
+  }
+}
