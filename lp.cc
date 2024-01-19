@@ -71,19 +71,19 @@ void LPModel::ToStandardForm() {
     }
   }
   std::set<Variable> negative_vars = non_base_variables_;
-  for (auto var : non_base_variables_) {
-    Constraint con(FLOAT);
-    con.expression -= 1.0f * var;
-    con.equation_type = Constraint::Type::LE;
-    for (int i = 0; i < constraints_.size(); i++) {
-      auto constraint = constraints_[i];
-      if (constraint == con) {
-        negative_vars.erase(var);
-        non_negative_variables_.insert(var);
-        constraints_.erase(constraints_.begin() + i);
-        break;
-      }
-    }
+  std::vector<int> non_negative_constraint_index;
+  for (int i = 0; i < constraints_.size(); i++) {
+    auto constraint = constraints_[i];
+    if (!IsNonNegativeConstraint(constraint)) continue;
+    auto var = constraint.expression.variable_coeff.begin()->first;
+    negative_vars.erase(var);
+    non_negative_variables_.insert(var);
+    non_negative_constraint_index.push_back(i);
+  }
+  std::reverse(non_negative_constraint_index.begin(),
+               non_negative_constraint_index.end());
+  for (auto index : non_negative_constraint_index) {
+    constraints_.erase(constraints_.begin() + index);
   }
   for (auto var : negative_vars) {
     non_base_variables_.erase(var);
@@ -339,5 +339,15 @@ bool SlackFormSanityCheck(LPModel model) {
     }
     if (base_vars != 1) return false;
   }
+  return true;
+}
+
+bool LPModel::IsNonNegativeConstraint(const Constraint& constraint) {
+  if (constraint.equation_type != Constraint::Type::LE) return false;
+  if (constraint.compare != kFloatZero) return false;
+  if (constraint.expression.constant != kFloatZero) return false;
+  if (constraint.expression.variable_coeff.size() != 1) return false;
+  if (constraint.expression.variable_coeff.begin()->second != Num(-1.0f))
+    return false;
   return true;
 }

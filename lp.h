@@ -92,6 +92,8 @@ class LPModel {
   }
 
  private:
+  // Check if the constraint is in the form of: x >= 0
+  bool IsNonNegativeConstraint(const Constraint &constraint);
   std::vector<Constraint> constraints_;
   OptimizationObject opt_obj_;
   std::set<Variable> base_variables_;
