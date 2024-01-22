@@ -3,6 +3,7 @@
 int LPModel::base_variable_count_ = 0;
 int LPModel::substitution_variable_count_ = 0;
 int LPModel::dual_variable_count_ = 0;
+int LPModel::artificial_variable_count_ = 0;
 
 Variable CreateBaseVariable() {
   auto var = Variable(kBase + std::to_string(LPModel::base_variable_count_));
@@ -20,6 +21,13 @@ Variable CreateSubstitutionVariable() {
 Variable CreateDualVariable() {
   auto var = Variable(kDual + std::to_string(LPModel::dual_variable_count_));
   LPModel::dual_variable_count_ += 1;
+  return var;
+}
+
+Variable CreateArtificialVariable() {
+  auto var = Variable(kArtificial +
+                      std::to_string(LPModel::artificial_variable_count_));
+  LPModel::artificial_variable_count_ += 1;
   return var;
 }
 
@@ -502,4 +510,94 @@ Num LPModel::GetDualSolveOptimum() {
   }
   if (opt_reverted_) ret = -ret;
   return ret;
+}
+
+Result LPModel::ColumnGenerationSolve() {
+  LPModel master_problem;
+  // Add artificial variables to set up the initial restricted master problem.
+  std::set<Variable> artificials;
+  for (int i = 0; i < constraints_.size(); i++) {
+    auto artificial = CreateArtificialVariable();
+    artificials.insert(artificial);
+    non_base_variables_.insert(artificial);
+    if (constraints_[i].compare >= kFloatZero) {
+      constraints_[i].expression += 1.0f * artificial;
+    } else {
+      constraints_[i].expression += -1.0f * artificial;
+    }
+    Constraint constraint(FLOAT);
+    constraint.equation_type = Constraint::LE;
+    constraint.expression =
+        constraints_[i].expression.GetCoeffOf(artificial) * artificial;
+    constraint.compare = constraints_[i].compare;
+    master_problem.AddConstraint(constraint);
+  }
+  master_problem.opt_reverted_ = opt_reverted_;
+  OptimizationObject opt(FLOAT);
+  opt.opt_type = OptimizationObject::MAX;
+  for (auto artificial : artificials) {
+    opt_obj_.expression += -1000000000.0f * artificial;
+    opt.expression += -1000000000.0f * artificial;
+  }
+  master_problem.SetOptimizationObject(opt);
+  std::set<Variable> added_variables = artificials;
+  master_problem.non_base_variables_ = artificials;
+  master_problem.non_negative_variables_ = artificials;
+  while (true) {
+    LPModel dual_problem = master_problem.ToDualForm();
+    dual_problem.ToStandardForm();
+    dual_problem.ToSlackForm();
+    auto result = dual_problem.Solve();
+    if (result == NOSOLUTION) return UNBOUNDED;
+    if (result == UNBOUNDED) return NOSOLUTION;
+    assert(result == SOLVED);
+    auto sol = dual_problem.GetSolution();
+    // Pricing problem.
+    std::set<Variable> all_vars = non_base_variables_;
+    Variable to_be_added;
+    Num val = Num(-1000000000.f);
+    for (auto var : all_vars) {
+      if (added_variables.find(var) != added_variables.end()) continue;
+      auto c = opt_obj_.expression.GetCoeffOf(var);
+      Num u = kFloatZero;
+      int i = 0;
+      for (auto entry : sol) {
+        u += constraints_[i].expression.GetCoeffOf(var) * entry.second;
+        i += 1;
+      }
+      if (val < c - u) {
+        val = c - u;
+        to_be_added = var;
+      }
+    }
+    if (to_be_added.IsUndefined()) break;
+    if (val <= 0.0f) break;
+    for (int i = 0; i < constraints_.size(); i++) {
+      auto con = constraints_[i];
+      master_problem.constraints_[i].expression +=
+          con.expression.GetCoeffOf(to_be_added) * to_be_added;
+    }
+    master_problem.opt_obj_.expression +=
+        opt_obj_.expression.GetCoeffOf(to_be_added) * to_be_added;
+    master_problem.non_base_variables_.insert(to_be_added);
+    master_problem.non_negative_variables_.insert(to_be_added);
+  }
+  std::cout << master_problem.ToString();
+  for (auto art : artificials) {
+    master_problem.opt_obj_.expression.SetCoeffOf(art, kFloatZero);
+    for (auto& con : master_problem.constraints_) {
+      con.expression.SetCoeffOf(art, kFloatZero);
+    }
+  }
+  master_problem.ToSlackForm();
+  master_problem.Solve();
+  column_generation_optimum_ = master_problem.GetOptimum();
+  column_generation_solution_ = master_problem.GetSolution();
+  return SOLVED;
+}
+
+Num LPModel::GetColumnGenerationOptimum() { return column_generation_optimum_; }
+
+std::map<Variable, Num> LPModel::GetColumnGenerationSolution() {
+  return column_generation_solution_;
 }

@@ -16,6 +16,7 @@
 const std::string kBase = "base";
 const std::string kSubstitution = "subst";
 const std::string kDual = "dual";
+const std::string kArtificial = "artificial";
 
 bool IsUserDefined(Variable var) {
   return var.variable_name.rfind(kBase, 0) != 0 &&
@@ -53,6 +54,14 @@ class LPModel {
 
   Result DualSolve(std::set<Variable> dual_feasible_solution_basis);
 
+  // Solves the linear programming problem with column generation algorithm:
+  // https://en.wikipedia.org/wiki/Column_generation
+  Result ColumnGenerationSolve();
+
+  Num GetColumnGenerationOptimum();
+
+  std::map<Variable, Num> GetColumnGenerationSolution();
+
   Num GetOptimum();
 
   Num GetDualSolveOptimum();
@@ -75,11 +84,13 @@ class LPModel {
   static int base_variable_count_;
   static int substitution_variable_count_;
   static int dual_variable_count_;
+  static int artificial_variable_count_;
 
   void Reset() {
     LPModel::base_variable_count_ = 0;
     LPModel::substitution_variable_count_ = 0;
     LPModel::dual_variable_count_ = 0;
+    LPModel::artificial_variable_count_ = 0;
   }
 
   // Mark as virtual for the convenience of testing.
@@ -119,6 +130,9 @@ class LPModel {
   // standard form transformation.
   std::set<Variable> non_negative_variables_;
   std::map<Variable, Expression> raw_variable_expression_;
+
+  Num column_generation_optimum_;
+  std::map<Variable, Num> column_generation_solution_;
 };
 
 Variable CreateBaseVariable();
@@ -126,6 +140,8 @@ Variable CreateBaseVariable();
 Variable CreateSubstitutionVariable();
 
 Variable CreateDualVariable();
+
+Variable CreateArtificialVariable();
 
 bool StandardFormSanityCheck(LPModel model);
 
