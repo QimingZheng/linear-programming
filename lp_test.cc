@@ -542,3 +542,45 @@ TEST(LPModel, DualSolve2) {
     EXPECT_GE(entry.second - actual_sol[entry.first], -1e-6f);
   }
 }
+
+
+TEST(LPModel, ColumnGenerationSolve) {
+  LPModel model;
+  Variable x1("x1"), x2("x2"), x3("x3"), x4("x4");
+  Variable b0("base0"), b1("base1"), b2("base2");
+  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT), c5(FLOAT), c6(FLOAT),
+      c7(FLOAT);
+  c1.expression = 1000.0f * x1 + 1500.0f * x2 + 1750.0f * x3 + 3250.0f * x4;
+  c1.equation_type = Constraint::Type::GE;
+  c1.compare = 4000.0f;
+  c2.expression = .6f * x1 + .27f * x2 + .68f * x3 + .3f * x4;
+  c2.equation_type = Constraint::Type::GE;
+  c2.compare = 1.0f;
+  c3.expression = 17.5f * x1 + 7.7f * x2 + 30.0f * x4;
+  c3.equation_type = Constraint::Type::GE;
+  c3.compare = 30.0f;
+  model.AddConstraint(c1);
+  model.AddConstraint(c2);
+  model.AddConstraint(c3);
+  c4.expression = x1;
+  c4.equation_type = Constraint::Type::GE;
+  model.AddConstraint(c4);
+  c5.expression = x2;
+  c5.equation_type = Constraint::Type::GE;
+  model.AddConstraint(c5);
+  c6.expression = x3;
+  c6.equation_type = Constraint::Type::GE;
+  model.AddConstraint(c6);
+  c7.expression = x4;
+  c7.equation_type = Constraint::Type::GE;
+  model.AddConstraint(c7);
+  OptimizationObject obj(FLOAT);
+  obj.SetOptType(OptimizationObject::Type::MIN);
+  obj.expression = .8f * x1 + .5f * x2 + .9f * x3 + 1.5f * x4;
+  EXPECT_EQ(obj.expression.constant, kFloatZero);
+  model.SetOptimizationObject(obj);
+
+  model.ToStandardForm();
+  auto result = model.ColumnGenerationSolve();
+  EXPECT_EQ(result, SOLVED);
+}
