@@ -1,8 +1,8 @@
-#include "lp.h"
-#include "parser.h"
-
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include "lp.h"
+#include "parser.h"
 
 TEST(LPModel, ToStandardForm) {
   Parser parser;
@@ -31,25 +31,9 @@ TEST(LPModel, ToStandardForm) {
 }
 
 TEST(LPModel, ToSlackForm) {
-  LPModel model;
-  Variable x1("x1"), x2("x2");
-  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT);
-  c1.SetCompare(7.0f);
-  c1.expression = x1 + x2;
-  c1.SetEquationType(Constraint::Type::EQ);
-  model.AddConstraint(c1);
-  c2.SetCompare(4.0f);
-  c2.expression = x1 - 2.0f * x2;
-  c2.SetEquationType(Constraint::Type::LE);
-  model.AddConstraint(c2);
-  c3.SetCompare(0.0f);
-  c3.expression = x1;
-  c3.SetEquationType(Constraint::Type::GE);
-  model.AddConstraint(c3);
-  OptimizationObject opt(FLOAT);
-  opt.expression = -2.0f * x1 + 3.0f * x2;
-  opt.SetOptType(OptimizationObject::Type::MIN);
-  model.SetOptimizationObject(opt);
+  Parser parser;
+  std::ifstream file("tests/test0.txt");
+  LPModel model = parser.Parse(file);
 
   model.ToStandardForm();
   model.ToSlackForm();
@@ -68,29 +52,9 @@ TEST(LPModel, ToSlackForm) {
 }
 
 TEST(LPModel, AddConstraint) {
-  LPModel model;
-  Variable x1("x1"), x2("x2");
-  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT);
-  c1.SetCompare(12.0f);
-  c1.expression = 2.0f * x1 + x2;
-  c1.SetEquationType(Constraint::Type::LE);
-  model.AddConstraint(c1);
-  c2.SetCompare(9.0f);
-  c2.expression = x1 + 2.0f * x2;
-  c2.SetEquationType(Constraint::Type::LE);
-  model.AddConstraint(c2);
-  c3.SetCompare(0.0f);
-  c3.expression = x1;
-  c3.SetEquationType(Constraint::Type::GE);
-  model.AddConstraint(c3);
-  c4.SetCompare(0.0f);
-  c4.expression = x2;
-  c4.SetEquationType(Constraint::Type::GE);
-  model.AddConstraint(c4);
-  OptimizationObject opt(FLOAT);
-  opt.expression = -1.0f * x1 - x2;
-  opt.SetOptType(OptimizationObject::Type::MIN);
-  model.SetOptimizationObject(opt);
+  Parser parser;
+  std::ifstream file("tests/test3.txt");
+  LPModel model = parser.Parse(file);
 
   EXPECT_EQ(model.ToString(),
             "min -1.000000 * x1 + -1.000000 * x2 + 0.000000\n"
@@ -117,29 +81,9 @@ TEST(LPModel, AddConstraint) {
 }
 
 TEST(LPModel, Pivot) {
-  LPModel model;
-  Variable x1("x1"), x2("x2");
-  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT);
-  c1.SetCompare(12.0f);
-  c1.expression = 2.0f * x1 + 1.0f * x2;
-  c1.SetEquationType(Constraint::Type::LE);
-  model.AddConstraint(c1);
-  c2.SetCompare(9.0f);
-  c2.expression = 1.0f * x1 + 2.0f * x2;
-  c2.SetEquationType(Constraint::Type::LE);
-  model.AddConstraint(c2);
-  c3.SetCompare(0.0f);
-  c3.expression = x1;
-  c3.SetEquationType(Constraint::Type::GE);
-  model.AddConstraint(c3);
-  c4.SetCompare(0.0f);
-  c4.expression = x2;
-  c4.SetEquationType(Constraint::Type::GE);
-  model.AddConstraint(c4);
-  OptimizationObject opt(FLOAT);
-  opt.expression = -1.0f * x1 - 1.0f * x2;
-  opt.SetOptType(OptimizationObject::Type::MIN);
-  model.SetOptimizationObject(opt);
+  Parser parser;
+  std::ifstream file("tests/test3.txt");
+  LPModel model = parser.Parse(file);
   model.ToStandardForm();
   model.ToSlackForm();
   EXPECT_EQ(model.ToString(),
@@ -167,29 +111,10 @@ TEST(LPModel, Pivot) {
 }
 
 TEST(LPModel, Solve) {
-  LPModel model;
+  Parser parser;
+  std::ifstream file("tests/test3.txt");
+  LPModel model = parser.Parse(file);
   Variable x1("x1"), x2("x2");
-  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT);
-  c1.SetCompare(12.0f);
-  c1.expression = 2.0f * x1 + 1.0f * x2;
-  c1.SetEquationType(Constraint::Type::LE);
-  model.AddConstraint(c1);
-  c2.SetCompare(9.0f);
-  c2.expression = (1.0f * x1) + (2.0f * x2);
-  c2.SetEquationType(Constraint::Type::LE);
-  model.AddConstraint(c2);
-  c3.SetCompare(0.0f);
-  c3.expression = x1;
-  c3.SetEquationType(Constraint::Type::GE);
-  model.AddConstraint(c3);
-  c4.SetCompare(0.0f);
-  c4.expression = x2;
-  c4.SetEquationType(Constraint::Type::GE);
-  model.AddConstraint(c4);
-  OptimizationObject opt(FLOAT);
-  opt.expression = -1.0f * x1 - 1.0f * x2;
-  opt.SetOptType(OptimizationObject::Type::MIN);
-  model.SetOptimizationObject(opt);
   model.ToStandardForm();
   model.ToSlackForm();
 
@@ -214,33 +139,11 @@ TEST(LPModel, Initialization) {
    *    2 * x1 - x2 >= 1
    *    3 * x2 <= 2
    */
-  LPModel model;
+  Parser parser;
+  std::ifstream file("tests/test4.txt");
+  LPModel model = parser.Parse(file);
   Variable x1("x1"), x2("x2");
-  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT), c5(FLOAT);
-  c1.SetCompare(1.0f);
-  c1.expression = x1 + x2;
-  c1.SetEquationType(Constraint::Type::GE);
-  model.AddConstraint(c1);
-  c2.SetCompare(1.0f);
-  c2.expression = 2.0f * x1 - x2;
-  c2.SetEquationType(Constraint::Type::GE);
-  model.AddConstraint(c2);
-  c3.SetCompare(2.0f);
-  c3.expression = 3.0f * x2;
-  c3.SetEquationType(Constraint::Type::LE);
-  model.AddConstraint(c3);
-  c4.SetCompare(0.0f);
-  c4.expression = x1;
-  c4.SetEquationType(Constraint::Type::GE);
-  model.AddConstraint(c4);
-  c5.SetCompare(0.0f);
-  c5.expression = x2;
-  c5.SetEquationType(Constraint::Type::GE);
-  model.AddConstraint(c5);
-  OptimizationObject opt(FLOAT);
-  opt.expression = (6.0f * x1) + (3.0f * x2);
-  opt.SetOptType(OptimizationObject::Type::MIN);
-  model.SetOptimizationObject(opt);
+
   model.ToStandardForm();
   model.ToSlackForm();
 
@@ -273,28 +176,10 @@ TEST(LPModel, Initialization) {
 }
 
 TEST(LPModel, GetSolution) {
-  LPModel model;
+  Parser parser;
+  std::ifstream file("tests/test5.txt");
+  LPModel model = parser.Parse(file);
   Variable x1("x1"), x2("x2");
-  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT);
-  c1.expression = x1 + x2;
-  c1.equation_type = Constraint::Type::LE;
-  c1.compare = 5.0f;
-  c2.expression = 10.0f * x1 + 6.0f * x2;
-  c2.equation_type = Constraint::Type::LE;
-  c2.compare = 45.0f;
-  model.AddConstraint(c1);
-  model.AddConstraint(c2);
-  c3.expression = x1;
-  c3.equation_type = Constraint::Type::GE;
-  model.AddConstraint(c3);
-  c4.expression = x2;
-  c4.equation_type = Constraint::Type::GE;
-  model.AddConstraint(c4);
-  OptimizationObject obj(FLOAT);
-  obj.SetOptType(OptimizationObject::Type::MAX);
-  obj.expression = 5.0f * x1 + 4.0f * x2;
-  EXPECT_EQ(obj.expression.constant, kFloatZero);
-  model.SetOptimizationObject(obj);
 
   model.ToStandardForm();
   model.ToSlackForm();
@@ -320,32 +205,10 @@ TEST(LPModel, GetSolution) {
 }
 
 TEST(LPModel, ToDualForm) {
-  LPModel model;
+  Parser parser;
+  std::ifstream file("tests/test6.txt");
+  LPModel model = parser.Parse(file);
   Variable x1("x1"), x2("x2");
-  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT), c5(FLOAT);
-  c1.expression = 1.0f * x1 + 2.0f * x2;
-  c1.equation_type = Constraint::Type::LE;
-  c1.compare = 8.0f;
-  c2.expression = 4.0f * x1;
-  c2.equation_type = Constraint::Type::LE;
-  c2.compare = 16.0f;
-  c3.expression = 4.0f * x2;
-  c3.equation_type = Constraint::Type::LE;
-  c3.compare = 12.0f;
-  model.AddConstraint(c1);
-  model.AddConstraint(c2);
-  model.AddConstraint(c3);
-  c4.expression = x1;
-  c4.equation_type = Constraint::Type::GE;
-  model.AddConstraint(c4);
-  c5.expression = x2;
-  c5.equation_type = Constraint::Type::GE;
-  model.AddConstraint(c5);
-  OptimizationObject obj(FLOAT);
-  obj.SetOptType(OptimizationObject::Type::MAX);
-  obj.expression = 2.0f * x1 + 3.0f * x2;
-  EXPECT_EQ(obj.expression.constant, kFloatZero);
-  model.SetOptimizationObject(obj);
 
   model.ToStandardForm();
   auto dual = model.ToDualForm();
@@ -361,32 +224,10 @@ TEST(LPModel, ToDualForm) {
 }
 
 TEST(LPModel, GaussianElimination) {
-  LPModel model;
+  Parser parser;
+  std::ifstream file("tests/test6.txt");
+  LPModel model = parser.Parse(file);
   Variable x1("x1"), x2("x2");
-  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT), c5(FLOAT);
-  c1.expression = 1.0f * x1 + 2.0f * x2;
-  c1.equation_type = Constraint::Type::LE;
-  c1.compare = 8.0f;
-  c2.expression = 4.0f * x1;
-  c2.equation_type = Constraint::Type::LE;
-  c2.compare = 16.0f;
-  c3.expression = 4.0f * x2;
-  c3.equation_type = Constraint::Type::LE;
-  c3.compare = 12.0f;
-  model.AddConstraint(c1);
-  model.AddConstraint(c2);
-  model.AddConstraint(c3);
-  c4.expression = x1;
-  c4.equation_type = Constraint::Type::GE;
-  model.AddConstraint(c4);
-  c5.expression = x2;
-  c5.equation_type = Constraint::Type::GE;
-  model.AddConstraint(c5);
-  OptimizationObject obj(FLOAT);
-  obj.SetOptType(OptimizationObject::Type::MAX);
-  obj.expression = 2.0f * x1 + 3.0f * x2;
-  EXPECT_EQ(obj.expression.constant, kFloatZero);
-  model.SetOptimizationObject(obj);
 
   model.ToStandardForm();
   model.ToSlackForm();
@@ -413,32 +254,10 @@ TEST(LPModel, GaussianElimination) {
 }
 
 TEST(LPModel, DualSolve) {
-  LPModel model;
+  Parser parser;
+  std::ifstream file("tests/test7.txt");
+  LPModel model = parser.Parse(file);
   Variable x1("x1"), x2("x2");
-  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT), c5(FLOAT);
-  c1.expression = 1.0f * x1 + 2.0f * x2;
-  c1.equation_type = Constraint::Type::LE;
-  c1.compare = 1.0f;
-  c2.expression = 4.0f * x1;
-  c2.equation_type = Constraint::Type::LE;
-  c2.compare = 10.0f;
-  c3.expression = 4.0f * x2;
-  c3.equation_type = Constraint::Type::LE;
-  c3.compare = 9.0f;
-  model.AddConstraint(c1);
-  model.AddConstraint(c2);
-  model.AddConstraint(c3);
-  c4.expression = x1;
-  c4.equation_type = Constraint::Type::GE;
-  model.AddConstraint(c4);
-  c5.expression = x2;
-  c5.equation_type = Constraint::Type::GE;
-  model.AddConstraint(c5);
-  OptimizationObject obj(FLOAT);
-  obj.SetOptType(OptimizationObject::Type::MAX);
-  obj.expression = 2.0f * x1 + 3.0f * x2;
-  EXPECT_EQ(obj.expression.constant, kFloatZero);
-  model.SetOptimizationObject(obj);
 
   model.ToStandardForm();
   model.ToSlackForm();
@@ -448,16 +267,8 @@ TEST(LPModel, DualSolve) {
 
   auto base_variables = model.GetBaseVariables();
 
-  LPModel raw_model;
-  raw_model.SetOptimizationObject(obj);
-  c1.compare = 8.0f;
-  c2.compare = 16.0f;
-  c3.compare = 12.0f;
-  raw_model.AddConstraint(c1);
-  raw_model.AddConstraint(c2);
-  raw_model.AddConstraint(c3);
-  raw_model.AddConstraint(c4);
-  raw_model.AddConstraint(c5);
+  std::ifstream file2("tests/test8.txt");
+  LPModel raw_model = parser.Parse(file2);
 
   raw_model.ToStandardForm();
   raw_model.ToSlackForm();
@@ -474,40 +285,12 @@ TEST(LPModel, DualSolve) {
 }
 
 TEST(LPModel, DualSolve2) {
-  LPModel model;
+  Parser parser;
+  std::ifstream file("tests/test9.txt");
+  LPModel model = parser.Parse(file);
+
   Variable x1("x1"), x2("x2"), x3("x3"), x4("x4");
   Variable b0("base0"), b1("base1"), b2("base2");
-  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT), c5(FLOAT), c6(FLOAT),
-      c7(FLOAT);
-  c1.expression = 1000.0f * x1 + 1500.0f * x2 + 1750.0f * x3 + 3250.0f * x4;
-  c1.equation_type = Constraint::Type::GE;
-  c1.compare = 4000.0f;
-  c2.expression = .6f * x1 + .27f * x2 + .68f * x3 + .3f * x4;
-  c2.equation_type = Constraint::Type::GE;
-  c2.compare = 1.0f;
-  c3.expression = 17.5f * x1 + 7.7f * x2 + 30.0f * x4;
-  c3.equation_type = Constraint::Type::GE;
-  c3.compare = 30.0f;
-  model.AddConstraint(c1);
-  model.AddConstraint(c2);
-  model.AddConstraint(c3);
-  c4.expression = x1;
-  c4.equation_type = Constraint::Type::GE;
-  model.AddConstraint(c4);
-  c5.expression = x2;
-  c5.equation_type = Constraint::Type::GE;
-  model.AddConstraint(c5);
-  c6.expression = x3;
-  c6.equation_type = Constraint::Type::GE;
-  model.AddConstraint(c6);
-  c7.expression = x4;
-  c7.equation_type = Constraint::Type::GE;
-  model.AddConstraint(c7);
-  OptimizationObject obj(FLOAT);
-  obj.SetOptType(OptimizationObject::Type::MIN);
-  obj.expression = .8f * x1 + .5f * x2 + .9f * x3 + 1.5f * x4;
-  EXPECT_EQ(obj.expression.constant, kFloatZero);
-  model.SetOptimizationObject(obj);
 
   model.ToStandardForm();
   model.ToSlackForm();
@@ -528,42 +311,10 @@ TEST(LPModel, DualSolve2) {
   }
 }
 
-
 TEST(LPModel, ColumnGenerationSolve) {
-  LPModel model;
-  Variable x1("x1"), x2("x2"), x3("x3"), x4("x4");
-  Variable b0("base0"), b1("base1"), b2("base2");
-  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT), c4(FLOAT), c5(FLOAT), c6(FLOAT),
-      c7(FLOAT);
-  c1.expression = 1000.0f * x1 + 1500.0f * x2 + 1750.0f * x3 + 3250.0f * x4;
-  c1.equation_type = Constraint::Type::GE;
-  c1.compare = 4000.0f;
-  c2.expression = .6f * x1 + .27f * x2 + .68f * x3 + .3f * x4;
-  c2.equation_type = Constraint::Type::GE;
-  c2.compare = 1.0f;
-  c3.expression = 17.5f * x1 + 7.7f * x2 + 30.0f * x4;
-  c3.equation_type = Constraint::Type::GE;
-  c3.compare = 30.0f;
-  model.AddConstraint(c1);
-  model.AddConstraint(c2);
-  model.AddConstraint(c3);
-  c4.expression = x1;
-  c4.equation_type = Constraint::Type::GE;
-  model.AddConstraint(c4);
-  c5.expression = x2;
-  c5.equation_type = Constraint::Type::GE;
-  model.AddConstraint(c5);
-  c6.expression = x3;
-  c6.equation_type = Constraint::Type::GE;
-  model.AddConstraint(c6);
-  c7.expression = x4;
-  c7.equation_type = Constraint::Type::GE;
-  model.AddConstraint(c7);
-  OptimizationObject obj(FLOAT);
-  obj.SetOptType(OptimizationObject::Type::MIN);
-  obj.expression = .8f * x1 + .5f * x2 + .9f * x3 + 1.5f * x4;
-  EXPECT_EQ(obj.expression.constant, kFloatZero);
-  model.SetOptimizationObject(obj);
+  Parser parser;
+  std::ifstream file("tests/test9.txt");
+  LPModel model = parser.Parse(file);
 
   model.ToStandardForm();
   auto result = model.ColumnGenerationSolve();
