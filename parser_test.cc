@@ -1,7 +1,7 @@
-#include "parser.h"
-
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+
+#include "parser.h"
 
 TEST(Lexer, Scan) {
   Lexer lex;
@@ -103,4 +103,20 @@ TEST(Parser, Parse) {
   EXPECT_EQ(model.ToString(),
             "max 3.000000 * x + 4.000000 * y + 0.000000\n"
             "3.000000 * x + 4.000000 * y + -5.000000 <= 60.000000\n");
+}
+
+TEST(Parser, Parse2) {
+  Parser parser;
+  std::ifstream file("tests/test1.txt", std::ifstream::in);
+  auto model = parser.Parse(file);
+  EXPECT_EQ(
+      model.ToString(),
+      "max 1.000000 * x1 + 14.000000 * x2 + 6.000000 * x3 + 0.000000\n"
+      "1.000000 * x1 + 1.000000 * x2 + 1.000000 * x3 + 0.000000 <= 3.000000\n"
+      "1.000000 * x1 + 0.000000 <= 2.000000\n"
+      "1.000000 * x3 + 0.000000 <= 3.000000\n"
+      "3.000000 * x2 + 1.000000 * x3 + 0.000000 <= 6.000000\n"
+      "1.000000 * x1 + 0.000000 >= 0.000000\n"
+      "1.000000 * x2 + 0.000000 >= 0.000000\n"
+      "1.000000 * x3 + 0.000000 >= 0.000000\n");
 }

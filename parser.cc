@@ -226,7 +226,7 @@ LPModel Parser::Parse(std::string input) {
   return Parse(tokens);
 }
 
-LPModel Parser::Parse(std::ifstream file) {
+LPModel Parser::Parse(std::ifstream &file) {
   if (file.is_open()) {
     std::string input;
     std::string line;
@@ -236,6 +236,6 @@ LPModel Parser::Parse(std::ifstream file) {
     file.close();
     return Parse(input);
   } else {
-    throw std::runtime_error("Error when reading file\n");
+    throw std::runtime_error("Cannot find file\n");
   }
 }

@@ -51,7 +51,7 @@ class Parser {
  public:
   LPModel Parse(std::vector<Token> tokens);
   LPModel Parse(std::string input);
-  LPModel Parse(std::ifstream file);
+  LPModel Parse(std::ifstream &file);
 
   OptimizationObject ParseOptimizationObject(std::vector<Token> tokens);
   Constraint ParseConstraint(std::vector<Token> tokens);

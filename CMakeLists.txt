@@ -17,6 +17,9 @@ FetchContent_MakeAvailable(googletest)
 add_library(GTest::GTest INTERFACE IMPORTED)
 target_link_libraries(GTest::GTest INTERFACE gtest_main gmock_main)
 
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/tests/)
+
 include_directories(lp_header lp.h)
 include_directories(ilp_header ilp.h)
 include_directories(base_header base.h)
