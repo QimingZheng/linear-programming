@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 #include <math.h>
+#include <fstream>
 
 enum DataType {
   UNKNOWN,
@@ -36,7 +37,7 @@ struct Variable {
 
   void To(DataType type) {
     if (this->type == type) return;
-    if (this->type == UNKNOWN || type == UNKNOWN)
+    if (this->type == DataType::UNKNOWN || type == DataType::UNKNOWN)
       throw std::runtime_error("Cannot convert unknown variable type");
     this->type = type;
   }
@@ -59,7 +60,7 @@ bool operator<(const Variable &lhs, const Variable &rhs) {
 
 struct Num {
  public:
-  Num() : type(UNKNOWN) {}
+  Num() : type(DataType::UNKNOWN) {}
   Num(float val) : type(FLOAT), float_value(val) {}
   Num(int val) : type(INTEGER), int_value(val) {}
 
@@ -85,7 +86,7 @@ struct Num {
   void To(DataType type) {
     if (this->type == type) return;
     this->type = type;
-    if (this->type == UNKNOWN || type == UNKNOWN)
+    if (this->type == DataType::UNKNOWN || type == DataType::UNKNOWN)
       throw std::runtime_error("Cannot convert unknown data type");
     switch (type) {
       case FLOAT:

@@ -6,6 +6,7 @@ project(
   LANGUAGES CXX)
 
 set (CMAKE_CXX_STANDARD 11)
+string(REPLACE "-DNDEBUG" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 
 include(FetchContent)
 FetchContent_Declare(
@@ -19,13 +20,16 @@ target_link_libraries(GTest::GTest INTERFACE gtest_main gmock_main)
 include_directories(lp_header lp.h)
 include_directories(ilp_header ilp.h)
 include_directories(base_header base.h)
+include_directories(parser_header parser.h)
 add_library(lp_library SHARED lp.cc)
 add_library(ilp_library SHARED ilp.cc)
+add_library(parser_library SHARED parser.cc)
 target_link_libraries(ilp_library lp_library)
+target_link_libraries(parser_library lp_library)
 
 add_executable(solver solver.cc)
-target_include_directories(solver PRIVATE ilp_header lp_header base_header)
-target_link_libraries(solver lp_library ilp_library)
+target_include_directories(solver PRIVATE ilp_header lp_header base_header parser_header)
+target_link_libraries(solver lp_library ilp_library parser_library)
 
 enable_testing()
 
@@ -74,4 +78,20 @@ target_link_libraries(
 add_test(
   NAME base_test
   COMMAND base_test
+)
+
+add_executable(
+  parser_test
+  parser_test.cc
+)
+target_include_directories(parser_test PRIVATE parser_header lp_header base_header)
+target_link_libraries(
+  parser_test
+  GTest::GTest
+  parser_library
+)
+
+add_test(
+  NAME parser_test
+  COMMAND parser_test
 )
