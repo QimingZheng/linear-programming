@@ -41,6 +41,12 @@ std::vector<Token> Lexer::Scan(std::string input) {
           if (next_tk == kUnknownTk) {
             next_tk = {Token::NUM, "", cur, -1};
           }
+        } else if (c == '.') {
+          if (next_tk == kUnknownTk) {
+            next_tk = {Token::NUM, "", cur, -1};
+          } else {
+            assert(next_tk.type == Token::NUM);
+          }
         } else if (c == '+' or c == '-' or c == '*' or c == '>' or c == '<' or
                    c == '=') {
           if (next_tk != kUnknownTk) {
@@ -173,11 +179,13 @@ Expression Parser::ParseExpression(std::vector<Token> tokens) {
   while (i < tokens.size()) {
     auto tk = tokens[i];
     if (tk.type == Token::ADD or tk.type == Token::SUB) {
-      auto exp = parse_unary(group);
-      if (sign)
-        ret += exp;
-      else
-        ret -= exp;
+      if (i != 0) {
+        auto exp = parse_unary(group);
+        if (sign)
+          ret += exp;
+        else
+          ret -= exp;
+      }
       sign = tk.type == Token::ADD;
       group.clear();
     } else {

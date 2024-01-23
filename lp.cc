@@ -587,7 +587,6 @@ Result LPModel::ColumnGenerationSolve() {
     master_problem.non_base_variables_.insert(to_be_added);
     master_problem.non_negative_variables_.insert(to_be_added);
   }
-  std::cout << master_problem.ToString();
   for (auto art : artificials) {
     master_problem.opt_obj_.expression.SetCoeffOf(art, kFloatZero);
     for (auto& con : master_problem.constraints_) {

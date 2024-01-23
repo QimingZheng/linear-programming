@@ -1,29 +1,14 @@
 #include "lp.h"
+#include "parser.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 TEST(LPModel, ToStandardForm) {
-  LPModel model;
+  Parser parser;
+  std::ifstream file("tests/test0.txt");
+  LPModel model = parser.Parse(file);
   Variable x1("x1"), x2("x2");
-  Constraint c1(FLOAT), c2(FLOAT), c3(FLOAT);
-  c1.SetCompare(7.0f);
-  c1.expression = x1 + x2;
-  c1.SetEquationType(Constraint::Type::EQ);
-  model.AddConstraint(c1);
-  c2.SetCompare(4.0f);
-  c2.expression = x1 - 2.0f * x2;
-  c2.SetEquationType(Constraint::Type::LE);
-  model.AddConstraint(c2);
-  c3.SetCompare(0.0f);
-  c3.expression = x1;
-  c3.SetEquationType(Constraint::Type::GE);
-  model.AddConstraint(c3);
-  OptimizationObject opt(FLOAT);
-  opt.expression = -2.0f * x1 + 3.0f * x2;
-  opt.SetOptType(OptimizationObject::Type::MIN);
-  model.SetOptimizationObject(opt);
-
   model.ToStandardForm();
 
   EXPECT_EQ(

@@ -26,6 +26,14 @@ TEST(Lexer, Scan) {
       {Token::NUM, "60", 18, 20},
   };
   EXPECT_EQ(lex.Scan(input), tokens);
+  input = "-2.0 * x1 + 3.0 * x2";
+  tokens = {
+      {Token::SUB, "-", 0, 1},   {Token::NUM, "2.0", 1, 4},
+      {Token::MUL, "*", 5, 6},   {Token::VAR, "x1", 7, 9},
+      {Token::ADD, "+", 10, 11}, {Token::NUM, "3.0", 12, 15},
+      {Token::MUL, "*", 16, 17}, {Token::VAR, "x2", 18, 20},
+  };
+  EXPECT_EQ(lex.Scan(input), tokens);
 }
 
 TEST(Parser, ParseOptimizationObject) {
@@ -66,6 +74,14 @@ TEST(Parser, ParseExpression) {
   };
   auto con = parser.ParseExpression(tokens);
   EXPECT_EQ(con.ToString(), "3.000000 * x + 4.000000 * y + -5.000000");
+  tokens = {
+      {Token::SUB, "-", 0, 1},   {Token::NUM, "2.0", 1, 4},
+      {Token::MUL, "*", 5, 6},   {Token::VAR, "x1", 7, 9},
+      {Token::ADD, "+", 10, 11}, {Token::NUM, "3.0", 12, 15},
+      {Token::MUL, "*", 16, 17}, {Token::VAR, "x2", 18, 20},
+  };
+  con = parser.ParseExpression(tokens);
+  EXPECT_EQ(con.ToString(), "-2.000000 * x1 + 3.000000 * x2 + 0.000000");
 }
 
 TEST(Parser, Parse) {
