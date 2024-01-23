@@ -16,14 +16,15 @@
 
 class ILPModel {
  public:
-  ILPModel() : opt_obj_(OptimizationObject(INTEGER)) {}
+  ILPModel(Model model) : model_(model) {}
+  ILPModel() : model_({{}, OptimizationObject(INTEGER)}) {}
 
   void AddConstraint(Constraint constraint) {
-    constraints_.push_back(constraint);
+    model_.constraints.push_back(constraint);
   }
   void SetOptimizationObject(OptimizationObject obj) {
     // assert(obj.expression.constant == kIntZero);
-    opt_obj_ = obj;
+    model_.opt_obj = obj;
   }
 
   // Solves the integer programming problem with the branch and cut method.
@@ -41,8 +42,8 @@ class ILPModel {
 
   std::string ToString() {
     std::string ret = "";
-    ret += opt_obj_.ToString() + "\n";
-    for (auto constraint : constraints_) {
+    ret += model_.opt_obj.ToString() + "\n";
+    for (auto constraint : model_.constraints) {
       ret += constraint.ToString() + "\n";
     }
     return ret;
@@ -53,8 +54,9 @@ class ILPModel {
   std::map<Variable, Num> GetSolution() { return solution_; }
 
  private:
-  std::vector<Constraint> constraints_;
-  OptimizationObject opt_obj_;
+  Model model_;
+  // std::vector<Constraint> constraints_;
+  // OptimizationObject opt_obj_;
   Num optimum_;
   std::map<Variable, Num> solution_;
 };

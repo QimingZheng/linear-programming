@@ -1,6 +1,5 @@
 #include "base.h"
 
-
 bool operator==(const Variable &lhs, const Variable &rhs) {
   return lhs.variable_name == rhs.variable_name and lhs.type == rhs.type;
 }
@@ -10,9 +9,9 @@ bool operator!=(const Variable &lhs, const Variable &rhs) {
 }
 
 bool operator<(const Variable &lhs, const Variable &rhs) {
-  return lhs.type <= rhs.type and lhs.variable_name < rhs.variable_name;
+  if (lhs.type != rhs.type) return lhs.type < rhs.type;
+  return lhs.variable_name < rhs.variable_name;
 }
-
 
 bool operator==(const Num &lhs, const Num &rhs) {
   if (lhs.type != rhs.type) return false;
@@ -159,7 +158,6 @@ Num operator-(const Num num) {
   ret.int_value = -ret.int_value;
   return ret;
 }
-
 
 bool operator==(const Expression lhs, const Expression rhs) {
   if (lhs.constant != rhs.constant) return false;

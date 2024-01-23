@@ -1,7 +1,8 @@
+#include "lp.h"
+
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "lp.h"
 #include "parser.h"
 
 TEST(LPModel, ToStandardForm) {

@@ -24,6 +24,8 @@ struct Token {
     MUL,
     // DIV is not supported.
     EOL,  // end of one line.
+    // other symbols:
+    COMMA,
   };
   TokenType type;
   std::string lexim;
@@ -49,9 +51,9 @@ class Lexer {
 
 class Parser {
  public:
-  LPModel Parse(std::vector<Token> tokens);
-  LPModel Parse(std::string input);
-  LPModel Parse(std::ifstream &file);
+  Model Parse(std::vector<Token> tokens);
+  Model Parse(std::string input);
+  Model Parse(std::ifstream &file);
 
   OptimizationObject ParseOptimizationObject(std::vector<Token> tokens);
   Constraint ParseConstraint(std::vector<Token> tokens);

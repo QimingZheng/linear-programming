@@ -48,7 +48,7 @@ std::vector<Token> Lexer::Scan(std::string input) {
             assert(next_tk.type == Token::NUM);
           }
         } else if (c == '+' or c == '-' or c == '*' or c == '>' or c == '<' or
-                   c == '=') {
+                   c == '=' or c == ',') {
           if (next_tk != kUnknownTk) {
             next_tk.lexim =
                 input.substr(next_tk.start_index, cur - next_tk.start_index);
@@ -84,6 +84,10 @@ std::vector<Token> Lexer::Scan(std::string input) {
               break;
             case '=':
               next_tk = {Token::EQ, "=", cur, cur + 1};
+              ret.push_back(next_tk);
+              break;
+            case ',':
+              next_tk = {Token::COMMA, ",", cur, cur + 1};
               ret.push_back(next_tk);
               break;
           }
@@ -204,8 +208,7 @@ Expression Parser::ParseExpression(std::vector<Token> tokens) {
   return ret;
 }
 
-LPModel Parser::Parse(std::vector<Token> tokens) {
-  LPModel model;
+Model Parser::Parse(std::vector<Token> tokens) {
   std::vector<std::vector<Token>> lines;
   std::vector<Token> line;
   for (int i = 0; i < tokens.size(); i++) {
@@ -221,20 +224,55 @@ LPModel Parser::Parse(std::vector<Token> tokens) {
   assert(lines[0].size() >= 2);
   assert(lines[1].size() == 1);
   assert(lines[1][0].type == Token::ST);
-  model.SetOptimizationObject(ParseOptimizationObject(lines[0]));
-  for (int i = 2; i < lines.size(); i++) {
-    model.AddConstraint(ParseConstraint(lines[i]));
+  OptimizationObject opt_obj = ParseOptimizationObject(lines[0]);
+  // The last line can be an integer constraint.
+  auto sz = lines.size();
+  std::set<Variable> integers;
+  bool is_integer_constraint = false;
+  for (auto tk : lines[lines.size() - 1]) {
+    if (tk.type == Token::COMMA) {
+      is_integer_constraint = true;
+      break;
+    }
   }
-  return model;
+  if (is_integer_constraint) {
+    sz -= 1;
+    for (auto tk : lines[lines.size() - 1]) {
+      if (tk.type == Token::VAR) {
+        integers.insert(Variable(tk.lexim, INTEGER));
+      }
+    }
+  }
+  for (auto var : integers) {
+    Variable float_var(var.variable_name, FLOAT);
+    if (opt_obj.expression.GetCoeffOf(float_var) != kFloatZero) {
+      opt_obj.expression.SetCoeffOf(var,
+                                    opt_obj.expression.GetCoeffOf(float_var));
+      opt_obj.expression.SetCoeffOf(float_var, kFloatZero);
+    }
+  }
+  std::vector<Constraint> constraints;
+  for (int i = 2; i < sz; i++) {
+    auto con = ParseConstraint(lines[i]);
+    for (auto var : integers) {
+      Variable float_var(var.variable_name, FLOAT);
+      if (con.expression.GetCoeffOf(float_var) != kFloatZero) {
+        con.expression.SetCoeffOf(var, con.expression.GetCoeffOf(float_var));
+        con.expression.SetCoeffOf(float_var, kFloatZero);
+      }
+    }
+    constraints.push_back(con);
+  }
+  return {constraints, opt_obj};
 }
 
-LPModel Parser::Parse(std::string input) {
+Model Parser::Parse(std::string input) {
   Lexer lexer;
   auto tokens = lexer.Scan(input);
   return Parse(tokens);
 }
 
-LPModel Parser::Parse(std::ifstream &file) {
+Model Parser::Parse(std::ifstream &file) {
   if (file.is_open()) {
     std::string input;
     std::string line;

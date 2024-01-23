@@ -9,7 +9,7 @@ Result ILPModel::BranchAndBoundSolve() {
   problems.push(*this);
   auto is_integral = [](float x) -> bool { return fabs(x - int(x)) < 1e-6; };
   std::set<Variable> interger_vars;
-  for (auto constraint : constraints_) {
+  for (auto constraint : model_.constraints) {
     for (auto entry : constraint.expression.variable_coeff)
       interger_vars.insert(entry.first);
   }
@@ -59,7 +59,11 @@ Result ILPModel::BranchAndBoundSolve() {
     }
   }
   optimum_ = optimal;
-  solution_ = sol;
+  for (auto entry : sol) {
+    auto var = entry.first;
+    var.To(INTEGER);
+    solution_[var] = entry.second;
+  }
   return result;
 }
 
@@ -77,7 +81,7 @@ Result ILPModel::CuttingPlaneSolve() {
     if (result == NOSOLUTION) return NOSOLUTION;
     if (result == UNBOUNDED) return UNBOUNDED;
     bool all_intergral = true;
-    for (auto &constraint : model.constraints_) {
+    for (auto &constraint : model.model_.constraints) {
       float b = constraint.expression.constant.float_value;
       // If b < 0, int(b) will be larger than b.
       int b_interger_part = b < 0.0f ? int(b) - 1 : int(b);
@@ -127,7 +131,7 @@ Constraint ILPModel::FindGomoryCut(
 LPModel ILPModel::ToRelaxedLPModel() {
   LPModel model;
 
-  for (auto constraint : constraints_) {
+  for (auto constraint : model_.constraints) {
     auto con = Constraint(FLOAT);
     con.equation_type = constraint.equation_type;
     con.compare = constraint.compare;
@@ -146,15 +150,15 @@ LPModel ILPModel::ToRelaxedLPModel() {
     model.AddConstraint(con);
   }
   OptimizationObject obj(FLOAT);
-  for (auto &entry : opt_obj_.expression.variable_coeff) {
+  for (auto &entry : model_.opt_obj.expression.variable_coeff) {
     Variable var = entry.first;
     Num coeff = entry.second;
     coeff.To(FLOAT);
     var.To(FLOAT);
     obj.expression += coeff * var;
   }
-  obj.opt_type = opt_obj_.opt_type;
-  obj.expression.constant = opt_obj_.expression.constant;
+  obj.opt_type = model_.opt_obj.opt_type;
+  obj.expression.constant = model_.opt_obj.expression.constant;
   obj.expression.constant.To(FLOAT);
   model.SetOptimizationObject(obj);
 

@@ -20,6 +20,11 @@ const std::string kArtificial = "artificial";
 
 bool IsUserDefined(Variable var);
 
+struct Model {
+  std::vector<Constraint> constraints;
+  OptimizationObject opt_obj;
+};
+
 enum Result {
   UNBOUNDED,
   NOSOLUTION,
@@ -28,14 +33,15 @@ enum Result {
 
 class LPModel {
  public:
-  LPModel() : opt_obj_(OptimizationObject(FLOAT)) { Reset(); }
+  LPModel(Model model) : model_(model) { Reset(); }
+  LPModel() : model_({{}, OptimizationObject(FLOAT)}) { Reset(); }
 
   void AddConstraint(Constraint constraint) {
-    constraints_.push_back(constraint);
+    model_.constraints.push_back(constraint);
   }
   void SetOptimizationObject(OptimizationObject obj) {
     assert(obj.expression.constant == kFloatZero);
-    opt_obj_ = obj;
+    model_.opt_obj = obj;
   }
 
   // Transform the LP model to standard form:
@@ -67,8 +73,8 @@ class LPModel {
 
   std::string ToString() {
     std::string ret = "";
-    ret += opt_obj_.ToString() + "\n";
-    for (auto constraint : constraints_) {
+    ret += model_.opt_obj.ToString() + "\n";
+    for (auto constraint : model_.constraints) {
       ret += constraint.ToString() + "\n";
     }
     return ret;
@@ -118,8 +124,7 @@ class LPModel {
  private:
   // Check if the constraint is in the form of: x >= 0
   bool IsNonNegativeConstraint(const Constraint &constraint);
-  std::vector<Constraint> constraints_;
-  OptimizationObject opt_obj_;
+  Model model_;
   std::set<Variable> base_variables_;
   std::set<Variable> non_base_variables_;
   bool opt_reverted_ = false;
