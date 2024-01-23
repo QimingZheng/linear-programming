@@ -20,19 +20,12 @@ target_link_libraries(GTest::GTest INTERFACE gtest_main gmock_main)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/tests/)
 
-include_directories(lp_header lp.h)
-include_directories(ilp_header ilp.h)
-include_directories(base_header base.h)
-include_directories(parser_header parser.h)
-add_library(lp_library SHARED lp.cc)
-add_library(ilp_library SHARED ilp.cc)
-add_library(parser_library SHARED parser.cc)
-target_link_libraries(ilp_library lp_library)
-target_link_libraries(parser_library lp_library)
+include_directories(headers base.h parser.h ilp.h lp.h)
+add_library(lp_library SHARED lp.cc ilp.cc parser.cc base.cc)
 
 add_executable(solver solver.cc)
-target_include_directories(solver PRIVATE ilp_header lp_header base_header parser_header)
-target_link_libraries(solver lp_library ilp_library parser_library)
+target_include_directories(solver PRIVATE headers)
+target_link_libraries(solver lp_library)
 
 enable_testing()
 
@@ -40,27 +33,11 @@ add_executable(
   lp_test
   lp_test.cc
 )
-target_include_directories(lp_test PRIVATE lp_header base_header)
+target_include_directories(lp_test PRIVATE headers)
 target_link_libraries(
   lp_test
   GTest::GTest
   lp_library
-)
-
-add_executable(
-  ilp_test
-  ilp_test.cc
-)
-target_include_directories(ilp_test PRIVATE ilp_header lp_header base_header)
-target_link_libraries(
-  ilp_test
-  GTest::GTest
-  ilp_library
-)
-
-add_test(
-  NAME ilp_test
-  COMMAND ilp_test
 )
 
 add_test(
@@ -69,13 +46,30 @@ add_test(
 )
 
 add_executable(
+  ilp_test
+  ilp_test.cc
+)
+target_include_directories(ilp_test PRIVATE headers)
+target_link_libraries(
+  ilp_test
+  GTest::GTest
+  lp_library
+)
+
+add_test(
+  NAME ilp_test
+  COMMAND ilp_test
+)
+
+add_executable(
   base_test
   base_test.cc
 )
-target_include_directories(base_test PRIVATE base_header)
+target_include_directories(base_test PRIVATE headers)
 target_link_libraries(
   base_test
   GTest::GTest
+  lp_library
 )
 
 add_test(
@@ -87,11 +81,11 @@ add_executable(
   parser_test
   parser_test.cc
 )
-target_include_directories(parser_test PRIVATE parser_header lp_header base_header)
+target_include_directories(parser_test PRIVATE headers)
 target_link_libraries(
   parser_test
   GTest::GTest
-  parser_library
+  lp_library
 )
 
 add_test(

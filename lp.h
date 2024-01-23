@@ -18,10 +18,7 @@ const std::string kSubstitution = "subst";
 const std::string kDual = "dual";
 const std::string kArtificial = "artificial";
 
-bool IsUserDefined(Variable var) {
-  return var.variable_name.rfind(kBase, 0) != 0 &&
-         var.variable_name.rfind(kSubstitution, 0) != 0;
-}
+bool IsUserDefined(Variable var);
 
 enum Result {
   UNBOUNDED,

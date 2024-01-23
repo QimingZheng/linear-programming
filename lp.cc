@@ -5,6 +5,11 @@ int LPModel::substitution_variable_count_ = 0;
 int LPModel::dual_variable_count_ = 0;
 int LPModel::artificial_variable_count_ = 0;
 
+bool IsUserDefined(Variable var) {
+  return var.variable_name.rfind(kBase, 0) != 0 &&
+         var.variable_name.rfind(kSubstitution, 0) != 0;
+}
+
 Variable CreateBaseVariable() {
   auto var = Variable(kBase + std::to_string(LPModel::base_variable_count_));
   LPModel::base_variable_count_ += 1;
