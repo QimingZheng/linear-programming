@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <limits>
 #include <map>
 #include <set>
 #include <string>
@@ -62,9 +63,11 @@ struct Num {
   bool IsZero() {
     switch (type) {
       case FLOAT:
-        return float_value == 0.0;
+        return float_value == 0.0f;
       case INTEGER:
         return int_value == 0;
+      default:
+        throw std::runtime_error("IsZero error\n");
     }
   }
 
@@ -74,6 +77,8 @@ struct Num {
         return std::to_string(float_value);
       case INTEGER:
         return std::to_string(int_value);
+      default:
+        throw std::runtime_error("ToString error\n");
     }
     throw std::runtime_error("Unknown num data type");
   }
@@ -106,6 +111,10 @@ const Num kIntZero = Num(0);
 const Num kFloatZero = Num(0.0f);
 const Num kIntOne = Num(1);
 const Num kFloatOne = Num(1.0f);
+const Num kFloatMax = Num(std::numeric_limits<float>::max());
+const Num kFloatMin = Num(std::numeric_limits<float>::min());
+const Num kIntMax = Num(std::numeric_limits<int>::max());
+const Num kIntMin = Num(std::numeric_limits<int>::min());
 
 bool operator==(const Num &lhs, const Num &rhs);
 
@@ -166,6 +175,8 @@ struct Expression {
 };
 
 bool operator==(const Expression lhs, const Expression rhs);
+
+bool operator!=(const Expression lhs, const Expression rhs);
 
 Expression operator*(const Variable var, const Num num);
 Expression operator*(const Num num, const Variable var);

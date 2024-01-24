@@ -86,7 +86,7 @@ void LPModel::ToStandardForm() {
   }
   std::set<Variable> negative_vars = non_base_variables_;
   std::vector<int> non_negative_constraint_index;
-  for (int i = 0; i < model_.constraints.size(); i++) {
+  for (size_t i = 0; i < model_.constraints.size(); i++) {
     auto constraint = model_.constraints[i];
     if (!IsNonNegativeConstraint(constraint)) continue;
     auto var = constraint.expression.variable_coeff.begin()->first;
@@ -122,26 +122,31 @@ void LPModel::ToStandardForm() {
  * where s is the slack variable.
  */
 void LPModel::ToSlackForm() {
+  assert(StandardFormSanityCheck(*this) == true);
   for (auto& constraint : model_.constraints) {
     auto base_var = CreateBaseVariable();
     constraint.expression = constraint.compare - constraint.expression;
-    constraint.compare = 0.0f;
+    constraint.compare = kFloatZero;
     constraint.equation_type = Constraint::Type::EQ;
     constraint.expression += -1.0f * base_var;
     base_variables_.insert(base_var);
   }
 }
 
+// Pivot operation pivots between an non-base variable a base variable:
 void LPModel::Pivot(Variable base, Variable non_base) {
   assert(non_base_variables_.find(non_base) != non_base_variables_.end());
   assert(base_variables_.find(base) != base_variables_.end());
-  Expression substitution(0.0f);
+  Expression substitution(kFloatZero);
   for (auto& constraint : model_.constraints) {
-    if (constraint.expression.GetCoeffOf(base) != 0.0f and
-        constraint.expression.GetCoeffOf(non_base) != 0.0f) {
+    // Find a constraint that contains both the base and non-base variable.
+    if (!constraint.expression.GetCoeffOf(base).IsZero() and
+        !constraint.expression.GetCoeffOf(non_base).IsZero()) {
+      // TODO: add this constraint after fixed the column-generation-solve bug.
+      // assert(constraint.expression.GetCoeffOf(base) == -1.0f);
       auto coeff_of_non_base = constraint.expression.GetCoeffOf(non_base);
       substitution = constraint.expression;
-      substitution.SetCoeffOf(non_base, 0.0f);
+      substitution.SetCoeffOf(non_base, kFloatZero);
       substitution /= (-coeff_of_non_base);
       base_variables_.erase(base);
       base_variables_.insert(non_base);
@@ -150,10 +155,11 @@ void LPModel::Pivot(Variable base, Variable non_base) {
       break;
     }
   }
+  assert(substitution != Expression(kFloatZero));
   ReplaceVariableWithExpression(model_.opt_obj.expression, non_base,
                                 substitution);
   for (auto& constraint : model_.constraints) {
-    if (constraint.expression.GetCoeffOf(non_base) == 0.0f) continue;
+    if (constraint.expression.GetCoeffOf(non_base) == kFloatZero) continue;
     if (constraint.expression.variable_coeff.find(base) ==
         constraint.expression.variable_coeff.end()) {
       ReplaceVariableWithExpression(constraint.expression, non_base,
@@ -165,74 +171,109 @@ void LPModel::Pivot(Variable base, Variable non_base) {
   }
 }
 
-Result LPModel::Initialize() {
-  // Phase 1: If there are negative constants in some constraint, use Pivot
-  // method to transform the constrain system to non-negative form.
-  bool need_transform = false;
-  for (auto constraint : model_.constraints) {
+bool needInitialization(const std::vector<Constraint>& constraints) {
+  bool needed = false;
+  for (auto constraint : constraints) {
     if (constraint.expression.constant < 0.0f) {
-      need_transform = true;
+      needed = true;
+      break;
     }
   }
-  if (!need_transform) return SOLVED;
-  LPModel phase1_model;
-  Variable artificial_var("artificial_variable");
+  return needed;
+}
+
+/* Phase 1: If there are negative constants in some constraint, use Pivot method
+ * to transform the constrain system to non-negative form. See:
+ * https://zh.wikipedia.org/wiki/%E5%8D%95%E7%BA%AF%E5%BD%A2%E6%B3%95#%E5%88%9D%E5%A7%8B%E5%8C%96%E8%BF%87%E7%A8%8B
+ */
+Result LPModel::Initialize() {
+  if (!needInitialization(model_.constraints)) return SOLVED;
+
+  // Define a new non-base variable (x_{0}) and construct a new helper LP
+  // problem:
+  //  max -x_{0}
+  //  s.t.
+  //    x_{i} >=0 \forall 0 <= i <= n + m
+  //    x_{j} = b_{j} - \sum A_{j, k} x_{k} (x_{k} is non-basis) \forall j \in
+  //    basis
+  LPModel helper_lp;
+  Variable artificial_var = CreateArtificialVariable();
   for (auto constraint : model_.constraints) {
     constraint.expression += artificial_var;
-    phase1_model.AddConstraint(constraint);
+    helper_lp.AddConstraint(constraint);
   }
-  phase1_model.non_base_variables_ = non_base_variables_;
-  phase1_model.non_base_variables_.insert(artificial_var);
-  phase1_model.base_variables_ = base_variables_;
+  helper_lp.non_base_variables_ = non_base_variables_;
+  helper_lp.non_base_variables_.insert(artificial_var);
+  helper_lp.base_variables_ = base_variables_;
   OptimizationObject obj(FLOAT);
   obj.expression += -1.0f * artificial_var;
   obj.SetOptType(OptimizationObject::MAX);
-  phase1_model.SetOptimizationObject(obj);
-  Num minimum = 0.0f;
-  int best = -1;
-  for (int i = 0; i < phase1_model.model_.constraints.size(); i++) {
-    auto constraint = phase1_model.model_.constraints[i];
+  helper_lp.SetOptimizationObject(obj);
+
+  // Find a x_{d} that minimize b_{d}
+  Num minimum = kFloatZero;
+  int minimum_base_index = -1;
+  for (size_t i = 0; i < helper_lp.model_.constraints.size(); i++) {
+    auto constraint = helper_lp.model_.constraints[i];
     if (constraint.expression.constant < minimum) {
       minimum = constraint.expression.constant;
-      best = i;
+      minimum_base_index = i;
     }
   }
-  assert(best >= 0);
-  for (auto entry :
-       phase1_model.model_.constraints[best].expression.variable_coeff) {
+  assert(minimum_base_index >= 0);
+
+  // Perform Pivot(x_{d}, x_{0})
+  for (auto entry : helper_lp.model_.constraints[minimum_base_index]
+                        .expression.variable_coeff) {
     auto var = entry.first;
     if (base_variables_.find(var) != base_variables_.end()) {
-      phase1_model.Pivot(var, artificial_var);
+      helper_lp.Pivot(var, artificial_var);
+      break;
     }
   }
-  for (auto constraint : phase1_model.model_.constraints) {
-    assert(constraint.expression.constant >= 0.0f);
-  }
-  phase1_model.Solve();
-  if (phase1_model.GetOptimum() < 0.0f) {
+  // Now, all constraints' constant b is non-negative.
+  for (auto constraint : helper_lp.model_.constraints)
+    assert(constraint.expression.constant >= kFloatZero);
+
+  // Solve the helper LP problem (can directly goes into phase 2, and the
+  // problem must be solvable and bounded).
+  auto result = helper_lp.Solve();
+  assert(result == SOLVED);
+
+  // If the helper LP problem's solution is nagative, which the raw LP
+  // constraints is not satisfiable unless x_{0} is positive .
+  if (helper_lp.GetOptimum() < kFloatZero) {
     return NOSOLUTION;
   }
-  if (phase1_model.base_variables_.find(artificial_var) !=
-      phase1_model.base_variables_.end()) {
-    auto any_non_base_var = phase1_model.non_base_variables_.begin();
-    phase1_model.Pivot(artificial_var, *any_non_base_var);
+
+  // Transform the helper LP problem back to the raw LP problem.
+
+  // If x_{0} is base variable, perform pivot(0, x_{e}) where x_{e} is any
+  // non-base variable. This operation does not breaks the no-negative property
+  // of vector b.
+  if (helper_lp.base_variables_.find(artificial_var) !=
+      helper_lp.base_variables_.end()) {
+    auto any_non_base_var = helper_lp.non_base_variables_.begin();
+    helper_lp.Pivot(artificial_var, *any_non_base_var);
   }
-  assert(phase1_model.non_base_variables_.find(artificial_var) !=
-         phase1_model.non_base_variables_.end());
-  for (auto& constraint : phase1_model.model_.constraints) {
-    constraint.expression.SetCoeffOf(artificial_var, 0.0f);
+  assert(helper_lp.non_base_variables_.find(artificial_var) !=
+         helper_lp.non_base_variables_.end());
+  for (auto& constraint : helper_lp.model_.constraints) {
+    constraint.expression.SetCoeffOf(artificial_var, kFloatZero);
   }
-  model_.constraints = phase1_model.model_.constraints;
-  phase1_model.non_base_variables_.erase(artificial_var);
-  base_variables_ = phase1_model.base_variables_;
-  non_base_variables_ = phase1_model.non_base_variables_;
-  for (auto base : phase1_model.base_variables_) {
-    Expression substitution(0.0f);
-    for (auto constraint : phase1_model.model_.constraints) {
-      if (constraint.expression.GetCoeffOf(base) != 0.0f) {
+  // Copy the helper_lp's constraints.
+  model_.constraints = helper_lp.model_.constraints;
+  helper_lp.non_base_variables_.erase(artificial_var);
+  base_variables_ = helper_lp.base_variables_;
+  non_base_variables_ = helper_lp.non_base_variables_;
+  // Replace base variables in the objective function with non-base variable.
+  for (auto base : helper_lp.base_variables_) {
+    Expression substitution(kFloatZero);
+    for (auto constraint : helper_lp.model_.constraints) {
+      if (!constraint.expression.GetCoeffOf(base).IsZero()) {
         substitution = constraint.expression;
-        substitution *= (-1.0f / constraint.expression.GetCoeffOf(base));
-        substitution.SetCoeffOf(base, 0.0f);
+        substitution *= (-kFloatOne / constraint.expression.GetCoeffOf(base));
+        substitution.SetCoeffOf(base, kFloatZero);
         break;
       }
     }
@@ -245,12 +286,13 @@ Result LPModel::Initialize() {
 Result LPModel::Solve() {
   auto res = Initialize();
   if (res == NOSOLUTION) return NOSOLUTION;
-  for (auto constraint : model_.constraints) {
-    assert(constraint.expression.constant >= 0.0f);
-  }
+  assert(res == SOLVED);
+  assert(needInitialization(model_.constraints) == false);
+
   // Phase 2: The main optimization procedures.
   while (true) {
     Variable e;
+    // Find any non-base variable x_{e} that c_e > 0.
     for (auto& entry : model_.opt_obj.expression.variable_coeff) {
       if (non_base_variables_.find(entry.first) != non_base_variables_.end() and
           entry.second > 0.0f) {
@@ -258,16 +300,19 @@ Result LPModel::Solve() {
         break;
       }
     }
+    // If not found, which means \vec c <= \vec 0, so the maximum of the
+    // objective function is already achieved.
     if (e.IsUndefined()) {
       return SOLVED;
     }
+    // Find a base variable x_{d} s.t. A_{d,e} > 0 and minimize b_{d}/A_{d,e}
     Variable d;
-    Num min_ = 10000000000.0f;
+    Num min_ = kFloatMax;
     for (auto base : base_variables_) {
       for (auto constraint : model_.constraints) {
-        assert(constraint.expression.constant >= 0.0f);
-        if (constraint.expression.GetCoeffOf(base) != 0.0f and
-            -constraint.expression.GetCoeffOf(e) > 0.0f) {
+        assert(constraint.expression.constant >= kFloatZero);
+        if (constraint.expression.GetCoeffOf(base) != kFloatZero and
+            -constraint.expression.GetCoeffOf(e) > kFloatZero) {
           if (min_ > constraint.expression.constant /
                          (-constraint.expression.GetCoeffOf(e))) {
             min_ = constraint.expression.constant /
@@ -277,12 +322,15 @@ Result LPModel::Solve() {
         }
       }
     }
+    // If x_{d} is not found, which means the optimum is unbounded (by assigning
+    // x_{e} as +infinity, and all other non-base as 0).
     if (d.IsUndefined()) {
       return UNBOUNDED;
     }
+    // Perform pivot(x_{d}, x_{e})
     Pivot(d, e);
   }
-  throw std::runtime_error("Should not reach this line");
+  return ERROR;
 }
 
 Num LPModel::GetOptimum() {
@@ -394,7 +442,7 @@ LPModel LPModel::ToDualForm() {
     Constraint con(FLOAT);
     con.equation_type = Constraint::Type::GE;
     con.compare = model_.opt_obj.expression.GetCoeffOf(variable);
-    for (int i = 0; i < model_.constraints.size(); i++) {
+    for (size_t i = 0; i < model_.constraints.size(); i++) {
       con.expression +=
           model_.constraints[i].expression.GetCoeffOf(variable) * ys[i];
     }
@@ -415,7 +463,7 @@ void LPModel::GaussianElimination(std::set<Variable> base_variables) {
     assert(con.equation_type == Constraint::Type::EQ);
   }
   for (auto base : base_variables) {
-    for (int i = 0; i < model_.constraints.size(); i++) {
+    for (size_t i = 0; i < model_.constraints.size(); i++) {
       Constraint& con = model_.constraints[i];
       if (con.expression.GetCoeffOf(base) == kFloatZero) continue;
       con.expression *= (1.0f / con.expression.GetCoeffOf(base));
@@ -520,7 +568,7 @@ Result LPModel::ColumnGenerationSolve() {
   LPModel master_problem;
   // Add artificial variables to set up the initial restricted master problem.
   std::set<Variable> artificials;
-  for (int i = 0; i < model_.constraints.size(); i++) {
+  for (size_t i = 0; i < model_.constraints.size(); i++) {
     auto artificial = CreateArtificialVariable();
     artificials.insert(artificial);
     non_base_variables_.insert(artificial);
@@ -576,7 +624,7 @@ Result LPModel::ColumnGenerationSolve() {
     }
     if (to_be_added.IsUndefined()) break;
     if (val <= 0.0f) break;
-    for (int i = 0; i < model_.constraints.size(); i++) {
+    for (size_t i = 0; i < model_.constraints.size(); i++) {
       auto con = model_.constraints[i];
       master_problem.model_.constraints[i].expression +=
           con.expression.GetCoeffOf(to_be_added) * to_be_added;

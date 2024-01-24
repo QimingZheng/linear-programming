@@ -22,6 +22,9 @@ bool operator==(const Num &lhs, const Num &rhs) {
 
     case INTEGER:
       return lhs.int_value == rhs.int_value;
+
+    default:
+      throw std::runtime_error("Num == Num error\n");
   }
 }
 
@@ -169,6 +172,10 @@ bool operator==(const Expression lhs, const Expression rhs) {
       return false;
   }
   return true;
+}
+
+bool operator!=(const Expression lhs, const Expression rhs) {
+  return !(lhs == rhs);
 }
 
 Expression operator*(const Variable var, const Num num) {

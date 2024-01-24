@@ -26,6 +26,7 @@ struct Model {
 };
 
 enum Result {
+  ERROR,
   UNBOUNDED,
   NOSOLUTION,
   SOLVED,
@@ -53,13 +54,24 @@ class LPModel {
   // Transform the LP model to the slack form.
   void ToSlackForm();
 
+  /* The Simplex Method. See: https://en.wikipedia.org/wiki/Simplex_algorithm */
+  // The key operation of the simplex method.
   void Pivot(Variable base, Variable non_base);
 
+  // The phase 1 of the simplex method: initialization.
   Result Initialize();
 
+  // The phase 2 (main step) of the simplex method.
   Result Solve();
 
+  Num GetOptimum();
+
+  std::map<Variable, Num> GetSolution();
+
+  /* The Dual Simplex Method. */
   Result DualSolve(std::set<Variable> dual_feasible_solution_basis);
+
+  Num GetDualSolveOptimum();
 
   // Solves the linear programming problem with column generation algorithm:
   // https://en.wikipedia.org/wiki/Column_generation
@@ -68,29 +80,6 @@ class LPModel {
   Num GetColumnGenerationOptimum();
 
   std::map<Variable, Num> GetColumnGenerationSolution();
-
-  Num GetOptimum();
-
-  Num GetDualSolveOptimum();
-
-  std::map<Variable, Num> GetSolution();
-
-  std::string ToString() {
-    std::string ret = "";
-    ret += model_.opt_obj.ToString() + "\n";
-    for (auto constraint : model_.constraints) {
-      ret += constraint.ToString() + "\n";
-    }
-    return ret;
-  }
-
-  Variable CreateBaseVariable();
-
-  Variable CreateSubstitutionVariable();
-
-  Variable CreateDualVariable();
-
-  Variable CreateArtificialVariable();
 
   // Mark as virtual for the convenience of testing.
   virtual bool IsBaseVariable(Variable var) {
@@ -116,6 +105,23 @@ class LPModel {
   // Perform gaussian elimination on the slack form, and make the coefficients
   // of the base-variables forms an identity matrix.
   void GaussianElimination(std::set<Variable> base_variables);
+
+  std::string ToString() {
+    std::string ret = "";
+    ret += model_.opt_obj.ToString() + "\n";
+    for (auto constraint : model_.constraints) {
+      ret += constraint.ToString() + "\n";
+    }
+    return ret;
+  }
+
+  Variable CreateBaseVariable();
+
+  Variable CreateSubstitutionVariable();
+
+  Variable CreateDualVariable();
+
+  Variable CreateArtificialVariable();
 
  private:
   // Check if the constraint is in the form of: x >= 0
