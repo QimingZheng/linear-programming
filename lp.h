@@ -1,5 +1,5 @@
 /*
- * Created on Sun Jan 07 2023
+ * Created on Sun Jan 07 2024
  *
  * Copyright (c) 2024 - Qiming Zheng
  *
@@ -33,10 +33,8 @@ enum Result {
 
 class LPModel {
  public:
-  LPModel(Model model) : model_(model) { /* Reset(); */
-  }
-  LPModel() : model_({{}, OptimizationObject(FLOAT)}) { /* Reset(); */
-  }
+  LPModel(Model model) : model_(model) {}
+  LPModel() : model_({{}, OptimizationObject(FLOAT)}) {}
 
   void AddConstraint(Constraint constraint) {
     model_.constraints.push_back(constraint);

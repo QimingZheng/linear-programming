@@ -1,3 +1,11 @@
+/*
+ * Created on Sun Jan 24 2024
+ *
+ * Copyright (c) 2024 - Qiming Zheng
+ *
+ * This file defines the interface of LP problem description file parser.
+ *
+ */
 #pragma once
 
 #include <assert.h>
