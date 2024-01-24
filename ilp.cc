@@ -112,7 +112,7 @@ Constraint ILPModel::FindGomoryCut(
   con.equation_type = Constraint::Type::EQ;
   con.compare = kFloatZero;
   con.expression.constant = b_interger_part - b;
-  Variable slack = CreateBaseVariable();
+  Variable slack = model.CreateBaseVariable();
   model.AddBaseVariable(slack);
   con.expression -= slack;
   for (auto &entry :

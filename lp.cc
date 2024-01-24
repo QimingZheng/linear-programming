@@ -1,38 +1,32 @@
 #include "lp.h"
 
-int LPModel::base_variable_count_ = 0;
-int LPModel::substitution_variable_count_ = 0;
-int LPModel::dual_variable_count_ = 0;
-int LPModel::artificial_variable_count_ = 0;
-
 bool IsUserDefined(Variable var) {
   return var.variable_name.rfind(kBase, 0) != 0 &&
          var.variable_name.rfind(kSubstitution, 0) != 0;
 }
 
-Variable CreateBaseVariable() {
-  auto var = Variable(kBase + std::to_string(LPModel::base_variable_count_));
-  LPModel::base_variable_count_ += 1;
+Variable LPModel::CreateBaseVariable() {
+  auto var = Variable(kBase + std::to_string(base_variable_count_));
+  base_variable_count_ += 1;
   return var;
 }
 
-Variable CreateSubstitutionVariable() {
-  auto var = Variable(kSubstitution +
-                      std::to_string(LPModel::substitution_variable_count_));
-  LPModel::substitution_variable_count_ += 1;
+Variable LPModel::CreateSubstitutionVariable() {
+  auto var =
+      Variable(kSubstitution + std::to_string(substitution_variable_count_));
+  substitution_variable_count_ += 1;
   return var;
 }
 
-Variable CreateDualVariable() {
-  auto var = Variable(kDual + std::to_string(LPModel::dual_variable_count_));
-  LPModel::dual_variable_count_ += 1;
+Variable LPModel::CreateDualVariable() {
+  auto var = Variable(kDual + std::to_string(dual_variable_count_));
+  dual_variable_count_ += 1;
   return var;
 }
 
-Variable CreateArtificialVariable() {
-  auto var = Variable(kArtificial +
-                      std::to_string(LPModel::artificial_variable_count_));
-  LPModel::artificial_variable_count_ += 1;
+Variable LPModel::CreateArtificialVariable() {
+  auto var = Variable(kArtificial + std::to_string(artificial_variable_count_));
+  artificial_variable_count_ += 1;
   return var;
 }
 

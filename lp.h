@@ -33,8 +33,10 @@ enum Result {
 
 class LPModel {
  public:
-  LPModel(Model model) : model_(model) { Reset(); }
-  LPModel() : model_({{}, OptimizationObject(FLOAT)}) { Reset(); }
+  LPModel(Model model) : model_(model) { /* Reset(); */
+  }
+  LPModel() : model_({{}, OptimizationObject(FLOAT)}) { /* Reset(); */
+  }
 
   void AddConstraint(Constraint constraint) {
     model_.constraints.push_back(constraint);
@@ -52,6 +54,10 @@ class LPModel {
 
   // Transform the LP model to the slack form.
   void ToSlackForm();
+
+  void Pivot(Variable base, Variable non_base);
+
+  Result Initialize();
 
   Result Solve();
 
@@ -80,21 +86,13 @@ class LPModel {
     return ret;
   }
 
-  void Pivot(Variable base, Variable non_base);
+  Variable CreateBaseVariable();
 
-  Result Initialize();
+  Variable CreateSubstitutionVariable();
 
-  static int base_variable_count_;
-  static int substitution_variable_count_;
-  static int dual_variable_count_;
-  static int artificial_variable_count_;
+  Variable CreateDualVariable();
 
-  void Reset() {
-    LPModel::base_variable_count_ = 0;
-    LPModel::substitution_variable_count_ = 0;
-    LPModel::dual_variable_count_ = 0;
-    LPModel::artificial_variable_count_ = 0;
-  }
+  Variable CreateArtificialVariable();
 
   // Mark as virtual for the convenience of testing.
   virtual bool IsBaseVariable(Variable var) {
@@ -135,15 +133,12 @@ class LPModel {
 
   Num column_generation_optimum_;
   std::map<Variable, Num> column_generation_solution_;
+
+  int base_variable_count_ = 0;
+  int substitution_variable_count_ = 0;
+  int dual_variable_count_ = 0;
+  int artificial_variable_count_ = 0;
 };
-
-Variable CreateBaseVariable();
-
-Variable CreateSubstitutionVariable();
-
-Variable CreateDualVariable();
-
-Variable CreateArtificialVariable();
 
 bool StandardFormSanityCheck(LPModel model);
 
