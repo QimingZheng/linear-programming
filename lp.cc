@@ -1,8 +1,10 @@
 #include "lp.h"
 
 bool IsUserDefined(Variable var) {
-  return var.variable_name.rfind(kBase, 0) != 0 &&
-         var.variable_name.rfind(kSubstitution, 0) != 0;
+  return var.variable_name.rfind(kBase, 0) != 0 and
+         var.variable_name.rfind(kSubstitution, 0) != 0 and
+         var.variable_name.rfind(kDual, 0) != 0 and
+         var.variable_name.rfind(kArtificial, 0) != 0;
 }
 
 Variable LPModel::CreateBaseVariable() {
