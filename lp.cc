@@ -31,8 +31,8 @@ Variable LPModel::CreateArtificialVariable() {
 }
 
 /*
- * There four possible reasons that a raw linear programming problem is not in a
- * standard form:
+ * There are four possible reasons that a raw linear programming problem is not
+ * in a standard form:
  *    1. The objective function might be a minimization rather than a
  *       maximization.
  *    2. There might be variables without nonnegativity constraints.
@@ -478,7 +478,7 @@ void LPModel::GaussianElimination(std::set<Variable> base_variables) {
 
 Result LPModel::DualSolve(std::set<Variable> dual_feasible_solution_basis) {
   // Dual solve requires the optimization objective function in minimization
-  // form:
+  // form.
   if (model_.opt_obj.opt_type == OptimizationObject::MAX) {
     for (auto& entry : model_.opt_obj.expression.variable_coeff) {
       entry.second *= -1.0f;
@@ -514,7 +514,7 @@ Result LPModel::DualSolve(std::set<Variable> dual_feasible_solution_basis) {
     }
     if (found_optimal) break;
 
-    val = Num(1000000000000.0f);
+    val = kFloatMax;
     Variable n;
     for (auto entry : c.expression.variable_coeff) {
       if (entry.first == b) continue;

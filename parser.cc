@@ -211,7 +211,7 @@ Expression Parser::ParseExpression(std::vector<Token> tokens) {
 Model Parser::Parse(std::vector<Token> tokens) {
   std::vector<std::vector<Token>> lines;
   std::vector<Token> line;
-  for (int i = 0; i < tokens.size(); i++) {
+  for (size_t i = 0; i < tokens.size(); i++) {
     if (tokens[i].type == Token::EOL) {
       lines.push_back(line);
       line.clear();
@@ -252,7 +252,7 @@ Model Parser::Parse(std::vector<Token> tokens) {
     }
   }
   std::vector<Constraint> constraints;
-  for (int i = 2; i < sz; i++) {
+  for (size_t i = 2; i < sz; i++) {
     auto con = ParseConstraint(lines[i]);
     for (auto var : integers) {
       Variable float_var(var.variable_name, FLOAT);
