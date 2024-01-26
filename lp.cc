@@ -568,7 +568,12 @@ Num LPModel::GetDualSolveOptimum() {
 
 Result LPModel::ColumnGenerationSolve() {
   LPModel master_problem;
-  // Add artificial variables to set up the initial restricted master problem.
+  // Initialize the initial master problem by adding artificial variables to set
+  // up the initial restricted master problem:
+  //    max c^T x - \infinity^T y
+  //    s.t. Ax +/- y <= b (`+` if (b >= 0) else `-`)
+  //      x, y >= 0
+  // Then a trivial feasible solution to the raw problem is: x = 0, y = |b|
   std::set<Variable> artificials;
   for (size_t i = 0; i < model_.constraints.size(); i++) {
     auto artificial = CreateArtificialVariable();
@@ -598,6 +603,7 @@ Result LPModel::ColumnGenerationSolve() {
   master_problem.non_base_variables_ = artificials;
   master_problem.non_negative_variables_ = artificials;
   while (true) {
+    // Step 1: solve the dual problem:
     LPModel dual_problem = master_problem.ToDualForm();
     dual_problem.ToStandardForm();
     dual_problem.ToSlackForm();
@@ -606,7 +612,9 @@ Result LPModel::ColumnGenerationSolve() {
     if (result == UNBOUNDED) return NOSOLUTION;
     assert(result == SOLVED);
     auto sol = dual_problem.GetSolution();
-    // Pricing problem.
+    // Pricing problem: Find a non-base x_{j} with maximized reduced cost,
+    // where the pricing objective function is: c_{j} - u^T b (u is the solution
+    // to the dual LP).
     std::set<Variable> all_vars = non_base_variables_;
     Variable to_be_added;
     Num val = Num(-1000000000.f);
@@ -624,8 +632,10 @@ Result LPModel::ColumnGenerationSolve() {
         to_be_added = var;
       }
     }
+    // If no improving variables can be found, then the optimum is achieved.
     if (to_be_added.IsUndefined()) break;
-    if (val <= 0.0f) break;
+    // Add the improving variable to the master problem (both objective function
+    // and constraints).
     for (size_t i = 0; i < model_.constraints.size(); i++) {
       auto con = model_.constraints[i];
       master_problem.model_.constraints[i].expression +=
@@ -635,6 +645,7 @@ Result LPModel::ColumnGenerationSolve() {
         model_.opt_obj.expression.GetCoeffOf(to_be_added) * to_be_added;
     master_problem.non_base_variables_.insert(to_be_added);
     master_problem.non_negative_variables_.insert(to_be_added);
+    added_variables.insert(to_be_added);
   }
   for (auto art : artificials) {
     master_problem.model_.opt_obj.expression.SetCoeffOf(art, kFloatZero);
