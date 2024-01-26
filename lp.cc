@@ -494,12 +494,17 @@ Result LPModel::DualSolve(std::set<Variable> dual_feasible_solution_basis) {
     if (non_base_variables_.find(base) != non_base_variables_.end())
       non_base_variables_.erase(base);
   }
+  // Perform Gaussian eklimination to transform the simplex tableu into:
+  //  B^{-1} A = b
   GaussianElimination(dual_feasible_solution_basis);
   while (true) {
     bool found_optimal = true;
     Variable b;
     Num val = kFloatZero;
     Constraint c(FLOAT);
+    // The primal optimum is achieved if x_{b} >= 0 for all base variable x_{b}.
+    // Otherwise, find the minimum x_{r} that s.t. x_{r} < 0, and make it leave
+    // the base.
     for (auto con : model_.constraints) {
       for (auto base : base_variables_) {
         if (con.expression.GetCoeffOf(base) != kFloatZero) {
@@ -516,6 +521,8 @@ Result LPModel::DualSolve(std::set<Variable> dual_feasible_solution_basis) {
     }
     if (found_optimal) break;
 
+    // Find the non-base variable x_{j} that minimize:
+    //    -(c_{j} - c_{B}^{T} B^{-1} A)/A_{rj} (where A_{rj} < 0)
     val = kFloatMax;
     Variable n;
     for (auto entry : c.expression.variable_coeff) {
@@ -537,6 +544,8 @@ Result LPModel::DualSolve(std::set<Variable> dual_feasible_solution_basis) {
       }
     }
     if (n.IsUndefined()) return UNBOUNDED;
+
+    // Perform enter base operation for x_{j}, leave base operation for x_{r}.
     for (auto& con : model_.constraints) {
       if (con == c) {
         con.expression *= 1.0f / c.expression.GetCoeffOf(n);
