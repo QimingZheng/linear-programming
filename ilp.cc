@@ -28,7 +28,7 @@ Result ILPModel::BranchAndBoundSolve() {
     auto sub_problem = problems.front();
     problems.pop();
     auto relaxed_sub_problem = sub_problem.ToRelaxedLPModel();
-    auto sub_result = relaxed_sub_problem.Solve();
+    auto sub_result = relaxed_sub_problem.SimplexSolve();
     if (sub_result == NOSOLUTION) continue;
     if (sub_result == UNBOUNDED) return UNBOUNDED;
     if (relaxed_sub_problem.GetOptimum() < optimal) continue;
@@ -77,7 +77,7 @@ Result ILPModel::BranchAndBoundSolve() {
 Result ILPModel::CuttingPlaneSolve() {
   LPModel model = ToRelaxedLPModel();
   while (true) {
-    auto result = model.Solve();
+    auto result = model.SimplexSolve();
     if (result == NOSOLUTION) return NOSOLUTION;
     if (result == UNBOUNDED) return UNBOUNDED;
     bool all_intergral = true;

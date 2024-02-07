@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
   } else {
     lp_model.ToStandardForm();
     lp_model.ToSlackForm();
-    auto res = lp_model.Solve();
+    auto res = lp_model.SimplexSolve();
     if (res == Result::SOLVED) {
       std::cout << lp_model.GetOptimum().ToString() << "\n";
       for (auto entry : lp_model.GetSolution()) {

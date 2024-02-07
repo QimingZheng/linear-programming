@@ -62,7 +62,7 @@ class LPModel {
   Result Initialize();
 
   // The phase 2 (main step) of the simplex method.
-  Result Solve();
+  Result SimplexSolve();
 
   Num GetOptimum();
 

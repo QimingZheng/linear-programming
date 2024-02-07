@@ -239,7 +239,7 @@ Result LPModel::Initialize() {
 
   // Solve the helper LP problem (can directly goes into phase 2, and the
   // problem must be solvable and bounded).
-  auto result = helper_lp.Solve();
+  auto result = helper_lp.SimplexSolve();
   assert(result == SOLVED);
 
   // If the helper LP problem's solution is nagative, which the raw LP
@@ -285,7 +285,7 @@ Result LPModel::Initialize() {
   return SOLVED;
 }
 
-Result LPModel::Solve() {
+Result LPModel::SimplexSolve() {
   auto res = Initialize();
   if (res == NOSOLUTION) return NOSOLUTION;
   assert(res == SOLVED);
@@ -616,7 +616,7 @@ Result LPModel::ColumnGenerationSolve() {
     LPModel dual_problem = master_problem.ToDualForm();
     dual_problem.ToStandardForm();
     dual_problem.ToSlackForm();
-    auto result = dual_problem.Solve();
+    auto result = dual_problem.SimplexSolve();
     if (result == NOSOLUTION) return UNBOUNDED;
     if (result == UNBOUNDED) return NOSOLUTION;
     assert(result == SOLVED);
@@ -663,7 +663,7 @@ Result LPModel::ColumnGenerationSolve() {
     }
   }
   master_problem.ToSlackForm();
-  master_problem.Solve();
+  master_problem.SimplexSolve();
   column_generation_optimum_ = master_problem.GetOptimum();
   column_generation_solution_ = master_problem.GetSolution();
   return SOLVED;
