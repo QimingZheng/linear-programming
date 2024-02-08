@@ -50,8 +50,8 @@ int main(int argc, char **argv) {
     lp_model.ToSlackForm();
     auto res = lp_model.SimplexSolve();
     if (res == Result::SOLVED) {
-      std::cout << lp_model.GetOptimum().ToString() << "\n";
-      for (auto entry : lp_model.GetSolution()) {
+      std::cout << lp_model.GetSimplexOptimum().ToString() << "\n";
+      for (auto entry : lp_model.GetSimplexSolution()) {
         std::cout << entry.first.ToString() << " = " << entry.second.ToString()
                   << "\n";
       }

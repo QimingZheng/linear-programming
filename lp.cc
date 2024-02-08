@@ -244,7 +244,7 @@ Result LPModel::Initialize() {
 
   // If the helper LP problem's solution is nagative, which the raw LP
   // constraints is not satisfiable unless x_{0} is positive .
-  if (helper_lp.GetOptimum() < kFloatZero) {
+  if (helper_lp.GetSimplexOptimum() < kFloatZero) {
     return NOSOLUTION;
   }
 
@@ -335,7 +335,7 @@ Result LPModel::SimplexSolve() {
   return ERROR;
 }
 
-Num LPModel::GetOptimum() {
+Num LPModel::GetSimplexOptimum() {
   for (auto& entry : model_.opt_obj.expression.variable_coeff) {
     if (non_base_variables_.find(entry.first) != non_base_variables_.end() and
         entry.second > 0.0f) {
@@ -346,7 +346,7 @@ Num LPModel::GetOptimum() {
   return model_.opt_obj.expression.constant;
 }
 
-std::map<Variable, Num> LPModel::GetSolution() {
+std::map<Variable, Num> LPModel::GetSimplexSolution() {
   std::map<Variable, Num> all_sol;
   std::map<Variable, Num> sol;
   for (auto var : non_base_variables_) {
@@ -566,13 +566,17 @@ Result LPModel::DualSolve(std::set<Variable> dual_feasible_solution_basis) {
 }
 
 Num LPModel::GetDualSolveOptimum() {
-  auto sol = GetSolution();
+  auto sol = GetSimplexSolution();
   Num ret(FLOAT);
   for (auto entry : sol) {
     ret += entry.second * model_.opt_obj.expression.GetCoeffOf(entry.first);
   }
   if (opt_reverted_) ret = -ret;
   return ret;
+}
+
+std::map<Variable, Num> LPModel::GetDualSolveSolution() {
+  return GetSimplexSolution();
 }
 
 Result LPModel::ColumnGenerationSolve() {
@@ -620,7 +624,7 @@ Result LPModel::ColumnGenerationSolve() {
     if (result == NOSOLUTION) return UNBOUNDED;
     if (result == UNBOUNDED) return NOSOLUTION;
     assert(result == SOLVED);
-    auto sol = dual_problem.GetSolution();
+    auto sol = dual_problem.GetSimplexSolution();
     // Pricing problem: Find a non-base x_{j} with maximized reduced cost,
     // where the pricing objective function is: c_{j} - u^T b (u is the solution
     // to the dual LP).
@@ -664,8 +668,8 @@ Result LPModel::ColumnGenerationSolve() {
   }
   master_problem.ToSlackForm();
   master_problem.SimplexSolve();
-  column_generation_optimum_ = master_problem.GetOptimum();
-  column_generation_solution_ = master_problem.GetSolution();
+  column_generation_optimum_ = master_problem.GetSimplexOptimum();
+  column_generation_solution_ = master_problem.GetSimplexSolution();
   return SOLVED;
 }
 

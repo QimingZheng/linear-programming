@@ -31,16 +31,16 @@ Result ILPModel::BranchAndBoundSolve() {
     auto sub_result = relaxed_sub_problem.SimplexSolve();
     if (sub_result == NOSOLUTION) continue;
     if (sub_result == UNBOUNDED) return UNBOUNDED;
-    if (relaxed_sub_problem.GetOptimum() < optimal) continue;
-    if (is_integral_solution(relaxed_sub_problem.GetSolution())) {
-      optimal = relaxed_sub_problem.GetOptimum();
-      sol = relaxed_sub_problem.GetSolution();
+    if (relaxed_sub_problem.GetSimplexOptimum() < optimal) continue;
+    if (is_integral_solution(relaxed_sub_problem.GetSimplexSolution())) {
+      optimal = relaxed_sub_problem.GetSimplexOptimum();
+      sol = relaxed_sub_problem.GetSimplexSolution();
       result = SOLVED;
       continue;
     }
     // The optimal solution of this sub problem is better than the optimal so
     // far, need to split it into more sub-problems.
-    for (auto entry : relaxed_sub_problem.GetSolution()) {
+    for (auto entry : relaxed_sub_problem.GetSimplexSolution()) {
       if (!is_integral(entry.second.float_value)) {
         auto var = entry.first;
         var.To(INTEGER);
@@ -93,8 +93,8 @@ Result ILPModel::CuttingPlaneSolve() {
       }
     }
     if (all_intergral) {
-      optimum_ = model.GetOptimum();
-      solution_ = model.GetSolution();
+      optimum_ = model.GetSimplexOptimum();
+      solution_ = model.GetSimplexSolution();
       break;
     }
   }

@@ -64,14 +64,16 @@ class LPModel {
   // The phase 2 (main step) of the simplex method.
   Result SimplexSolve();
 
-  Num GetOptimum();
+  Num GetSimplexOptimum();
 
-  std::map<Variable, Num> GetSolution();
+  std::map<Variable, Num> GetSimplexSolution();
 
   /* The Dual Simplex Method. */
   Result DualSolve(std::set<Variable> dual_feasible_solution_basis);
 
   Num GetDualSolveOptimum();
+
+  std::map<Variable, Num> GetDualSolveSolution();
 
   // Solves the linear programming problem with column generation algorithm:
   // https://en.wikipedia.org/wiki/Column_generation
@@ -135,6 +137,15 @@ class LPModel {
   std::set<Variable> non_negative_variables_;
   std::map<Variable, Expression> raw_variable_expression_;
 
+  // The solution of simplex method.
+  Num simplex_optimum_;
+  std::map<Variable, Num> simplex_solution_;
+
+  // The solution of dual simplex method.
+  Num dual_simplex_optimum_;
+  std::map<Variable, Num> dual_simplex_solution_;
+
+  // The solution of column generation method.
   Num column_generation_optimum_;
   std::map<Variable, Num> column_generation_solution_;
 

@@ -126,9 +126,9 @@ TEST(LPModel, Solve) {
             "= 0.000000\n"
             "0.333333 * base0 + -0.666667 * base1 + -1.000000 * x2 + 2.000000 "
             "= 0.000000\n");
-  EXPECT_EQ(model.GetOptimum(), -7.0f);
+  EXPECT_EQ(model.GetSimplexOptimum(), -7.0f);
   auto sol = std::map<Variable, Num>({{x1, 5.0f}, {x2, 2.0f}});
-  EXPECT_EQ(model.GetSolution(), sol);
+  EXPECT_EQ(model.GetSimplexSolution(), sol);
 }
 
 TEST(LPModel, Initialization) {
@@ -165,9 +165,9 @@ TEST(LPModel, Initialization) {
             "-1.000000 * base2 + -3.000000 * x2 + 2.000000 = 0.000000\n");
 
   EXPECT_EQ(model.SimplexSolve(), Result::SOLVED);
-  EXPECT_EQ(model.GetOptimum(), 5.0f);
+  EXPECT_EQ(model.GetSimplexOptimum(), 5.0f);
   auto expected_sol = std::map<Variable, Num>({{x1, 2.0f / 3}, {x2, 1.0f / 3}});
-  auto actual_sol = model.GetSolution();
+  auto actual_sol = model.GetSimplexSolution();
   EXPECT_EQ(expected_sol.size(), actual_sol.size());
   for (auto entry : expected_sol) {
     EXPECT_EQ(actual_sol.find(entry.first) != actual_sol.end(), true);
@@ -196,8 +196,8 @@ TEST(LPModel, GetSolution) {
 
   auto expected_sol = std::map<Variable, Num>({{x1, 3.75f}, {x2, 1.25f}});
 
-  EXPECT_EQ(model.GetOptimum(), 23.75f);
-  auto actual_sol = model.GetSolution();
+  EXPECT_EQ(model.GetSimplexOptimum(), 23.75f);
+  auto actual_sol = model.GetSimplexSolution();
   for (auto entry : expected_sol) {
     EXPECT_EQ(actual_sol.find(entry.first) != actual_sol.end(), true);
     EXPECT_LE(entry.second - actual_sol[entry.first], 1e-6f);
@@ -277,7 +277,7 @@ TEST(LPModel, DualSolve) {
   EXPECT_EQ(result, SOLVED);
 
   auto expected_sol = std::map<Variable, Num>({{x1, 4.0f}, {x2, 2.0f}});
-  auto actual_sol = raw_model.GetSolution();
+  auto actual_sol = raw_model.GetDualSolveSolution();
   for (auto entry : expected_sol) {
     EXPECT_EQ(actual_sol.find(entry.first) != actual_sol.end(), true);
     EXPECT_LE(entry.second - actual_sol[entry.first], 1e-6f);
@@ -303,7 +303,7 @@ TEST(LPModel, DualSolve2) {
 
   auto expected_sol = std::map<Variable, Num>(
       {{x1, 0.704872f}, {x2, 2.074765f}, {x3, 0.0f}, {x4, 0.056302f}});
-  auto actual_sol = model.GetSolution();
+  auto actual_sol = model.GetDualSolveSolution();
 
   for (auto entry : expected_sol) {
     EXPECT_EQ(actual_sol.find(entry.first) != actual_sol.end(), true);
