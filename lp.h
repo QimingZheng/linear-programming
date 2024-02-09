@@ -128,6 +128,14 @@ class LPModel {
  private:
   // Check if the constraint is in the form of: x >= 0
   bool IsNonNegativeConstraint(const Constraint &constraint);
+
+  // Suppose the current LP form is the optimal solution, which means:
+  // the coefficients of all non-base variables in the objective function
+  // are non-negative. `GetOptimum()`, `GetSolution()` should return its optimal
+  // solution accordingly.
+  Num GetOptimum();
+  std::map<Variable, Num> GetSolution();
+
   Model model_;
   std::set<Variable> base_variables_;
   std::set<Variable> non_base_variables_;

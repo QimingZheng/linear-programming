@@ -9,6 +9,8 @@
 #pragma once
 
 #include <math.h>
+#include <sys/time.h>
+#include <time.h>
 
 #include <algorithm>
 #include <fstream>
@@ -295,4 +297,17 @@ struct OptimizationObject {
   Expression expression;
   Type opt_type = MIN;
   DataType data_type;
+};
+
+class Timer {
+ public:
+  Timer() { gettimeofday(&start, NULL); }
+  void Stop() { gettimeofday(&end, NULL); }
+  long Delta() {
+    return (end.tv_usec - start.tv_usec) +
+           (end.tv_sec - start.tv_sec) * 1000L * 1000L;
+  }
+
+ private:
+  struct timeval start, end;
 };

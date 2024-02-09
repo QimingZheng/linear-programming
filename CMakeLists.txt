@@ -92,3 +92,10 @@ add_test(
   NAME parser_test
   COMMAND parser_test
 )
+
+set(TestCases 12 13 14)
+foreach(Case ${TestCases})
+  add_test(NAME Test${Case} COMMAND ./solver tests/test${Case}.txt)
+  file(READ tests/sol${Case}.txt Solution)
+  set_tests_properties(Test${Case} PROPERTIES PASS_REGULAR_EXPRESSION ${Solution})
+endforeach()

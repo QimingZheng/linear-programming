@@ -31,10 +31,8 @@ int main(int argc, char **argv) {
   bool is_ilp = isIlp(model);
   if (is_ilp) {
     ilp_model = model;
-    std::cout << ilp_model.ToString();
   } else {
     lp_model = model;
-    std::cout << lp_model.ToString();
   }
   if (is_ilp) {
     auto res = ilp_model.CuttingPlaneSolve();

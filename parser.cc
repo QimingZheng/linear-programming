@@ -143,7 +143,6 @@ Constraint Parser::ParseConstraint(std::vector<Token> tokens) {
   assert(tokens[tokens.size() - 2].type == Token::EQ or
          tokens[tokens.size() - 2].type == Token::GE or
          tokens[tokens.size() - 2].type == Token::LE);
-  assert(tokens.back().type == Token::NUM);
   Constraint ret(FLOAT);
   ret.equation_type =
       tokens[tokens.size() - 2].type == Token::EQ
@@ -152,7 +151,7 @@ Constraint Parser::ParseConstraint(std::vector<Token> tokens) {
                                                          : Constraint::LE);
   std::vector<Token> exp(tokens.begin(), tokens.begin() + tokens.size() - 2);
   ret.expression = ParseExpression(exp);
-  ret.compare = Num(std::stof(tokens.back().lexim));
+  ret.expression -= ParseExpression({tokens.back()});
   return ret;
 }
 Expression Parser::ParseExpression(std::vector<Token> tokens) {

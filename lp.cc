@@ -305,6 +305,8 @@ Result LPModel::SimplexSolve() {
     // If not found, which means \vec c <= \vec 0, so the maximum of the
     // objective function is already achieved.
     if (e.IsUndefined()) {
+      simplex_optimum_ = GetOptimum();
+      simplex_solution_ = GetSolution();
       return SOLVED;
     }
     // Find a base variable x_{d} s.t. A_{d,e} > 0 and minimize b_{d}/A_{d,e}
@@ -335,7 +337,13 @@ Result LPModel::SimplexSolve() {
   return ERROR;
 }
 
-Num LPModel::GetSimplexOptimum() {
+Num LPModel::GetSimplexOptimum() { return simplex_optimum_; }
+
+std::map<Variable, Num> LPModel::GetSimplexSolution() {
+  return simplex_solution_;
+}
+
+Num LPModel::GetOptimum() {
   for (auto& entry : model_.opt_obj.expression.variable_coeff) {
     if (non_base_variables_.find(entry.first) != non_base_variables_.end() and
         entry.second > 0.0f) {
@@ -346,7 +354,7 @@ Num LPModel::GetSimplexOptimum() {
   return model_.opt_obj.expression.constant;
 }
 
-std::map<Variable, Num> LPModel::GetSimplexSolution() {
+std::map<Variable, Num> LPModel::GetSolution() {
   std::map<Variable, Num> all_sol;
   std::map<Variable, Num> sol;
   for (auto var : non_base_variables_) {
@@ -566,7 +574,7 @@ Result LPModel::DualSolve(std::set<Variable> dual_feasible_solution_basis) {
 }
 
 Num LPModel::GetDualSolveOptimum() {
-  auto sol = GetSimplexSolution();
+  auto sol = GetSolution();
   Num ret(FLOAT);
   for (auto entry : sol) {
     ret += entry.second * model_.opt_obj.expression.GetCoeffOf(entry.first);
@@ -576,7 +584,7 @@ Num LPModel::GetDualSolveOptimum() {
 }
 
 std::map<Variable, Num> LPModel::GetDualSolveSolution() {
-  return GetSimplexSolution();
+  return GetSolution();
 }
 
 Result LPModel::ColumnGenerationSolve() {

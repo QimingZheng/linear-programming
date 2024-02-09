@@ -1,0 +1,13 @@
+max 270 * yu + 210 * yv - 10 * xm - 50 * xa - 40 * xb
+st
+10 * yu + 9 * yv <= xm
+2 * yu + yv <= xa
+yu + yv <= xb
+xm >= 0
+xa >= 0
+xa <= 80
+xb >= 0
+xb <= 100
+yu >= 0
+yu <= 40
+yv >= 0
