@@ -518,7 +518,7 @@ Result LPModel::DualSolve(std::set<Variable> dual_feasible_solution_basis) {
     for (auto con : model_.constraints) {
       for (auto base : base_variables_) {
         if (!con.expression.GetCoeffOf(base).IsZero()) {
-          assert(con.expression.GetCoeffOf(base) == kFloatOne);
+          assert(con.expression.GetCoeffOf(base).IsOne());
           if (val >
               -con.expression.constant / con.expression.GetCoeffOf(base)) {
             found_optimal = false;

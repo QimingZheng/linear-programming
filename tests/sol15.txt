@@ -1,25 +1,25 @@
-26113.484375
-alice_a = 0.000000
+26113.500233
+alice_a = 300.000000
 alice_b = 0.000000
-alice_c = 300.000000
-badri_a = 400.000183
+alice_c = 0.000000
+badri_a = 400.000000
 badri_b = 0.000000
 badri_c = 0.000000
-cara_a = 419.999878
+cara_a = 120.000000
 cara_b = 0.000000
-cara_c = 80.000412
+cara_c = 380.000000
 dan_a = 0.000000
-dan_b = 0.000245
-dan_c = 199.999802
+dan_b = 0.000000
+dan_c = 200.000000
 emma_a = 0.000000
 emma_b = 0.000000
 emma_c = 300.000000
 fujita_a = 0.000000
 fujita_b = 0.000000
-fujita_c = 449.999969
+fujita_c = 450.000000
 grace_a = 0.000000
 grace_b = 800.000000
 grace_c = 0.000000
-helen_a = 180.000015
+helen_a = 180.000000
 helen_b = 0.000000
 helen_c = 0.000000

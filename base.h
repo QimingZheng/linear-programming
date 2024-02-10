@@ -29,6 +29,8 @@ enum DataType {
 
 const std::string kUndefined = "undefined";
 
+typedef double real_t;
+
 struct Variable {
  public:
   Variable() : variable_name(kUndefined) {}
@@ -56,12 +58,12 @@ bool operator!=(const Variable &lhs, const Variable &rhs);
 
 bool operator<(const Variable &lhs, const Variable &rhs);
 
-const float kEpsilonF = 1e-4f;
+const float kEpsilonF = 1e-6f;
 
 struct Num {
  public:
   Num() : type(DataType::UNKNOWN) {}
-  Num(float val) : type(FLOAT), float_value(val) {}
+  Num(real_t val) : type(FLOAT), float_value(val) {}
   Num(int val) : type(INTEGER), int_value(val) {}
 
   bool IsZero() const {
@@ -70,6 +72,17 @@ struct Num {
         return abs(float_value) < kEpsilonF;
       case INTEGER:
         return int_value == 0;
+      default:
+        throw std::runtime_error("IsZero error\n");
+    }
+  }
+
+  bool IsOne() const {
+    switch (type) {
+      case FLOAT:
+        return abs(float_value - 1.0) < kEpsilonF;
+      case INTEGER:
+        return int_value == 1;
       default:
         throw std::runtime_error("IsZero error\n");
     }
@@ -129,7 +142,7 @@ struct Num {
   }
 
   DataType type;
-  float float_value;
+  real_t float_value;
   int int_value;
 };
 
@@ -137,8 +150,8 @@ const Num kIntZero = Num(0);
 const Num kFloatZero = Num(0.0f);
 const Num kIntOne = Num(1);
 const Num kFloatOne = Num(1.0f);
-const Num kFloatMax = Num(std::numeric_limits<float>::max());
-const Num kFloatMin = Num(std::numeric_limits<float>::min());
+const Num kFloatMax = Num(std::numeric_limits<real_t>::max());
+const Num kFloatMin = Num(std::numeric_limits<real_t>::min());
 const Num kIntMax = Num(std::numeric_limits<int>::max());
 const Num kIntMin = Num(std::numeric_limits<int>::min());
 const Num kEpsilon = Num(kEpsilonF);
