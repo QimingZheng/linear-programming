@@ -56,18 +56,42 @@ bool operator!=(const Variable &lhs, const Variable &rhs);
 
 bool operator<(const Variable &lhs, const Variable &rhs);
 
+const float kEpsilonF = 1e-4f;
+
 struct Num {
  public:
   Num() : type(DataType::UNKNOWN) {}
   Num(float val) : type(FLOAT), float_value(val) {}
   Num(int val) : type(INTEGER), int_value(val) {}
 
-  bool IsZero() {
+  bool IsZero() const {
     switch (type) {
       case FLOAT:
-        return float_value == 0.0f;
+        return abs(float_value) < kEpsilonF;
       case INTEGER:
         return int_value == 0;
+      default:
+        throw std::runtime_error("IsZero error\n");
+    }
+  }
+
+  bool IsNegative() const {
+    switch (type) {
+      case FLOAT:
+        return float_value < -kEpsilonF;
+      case INTEGER:
+        return int_value < 0;
+      default:
+        throw std::runtime_error("IsZero error\n");
+    }
+  }
+
+  bool IsNonNegative() const {
+    switch (type) {
+      case FLOAT:
+        return float_value >= -kEpsilonF;
+      case INTEGER:
+        return int_value >= 0;
       default:
         throw std::runtime_error("IsZero error\n");
     }
@@ -117,6 +141,7 @@ const Num kFloatMax = Num(std::numeric_limits<float>::max());
 const Num kFloatMin = Num(std::numeric_limits<float>::min());
 const Num kIntMax = Num(std::numeric_limits<int>::max());
 const Num kIntMin = Num(std::numeric_limits<int>::min());
+const Num kEpsilon = Num(kEpsilonF);
 
 bool operator==(const Num &lhs, const Num &rhs);
 

@@ -93,7 +93,7 @@ add_test(
   COMMAND parser_test
 )
 
-set(TestCases 12 13 14)
+set(TestCases 12 13 14 15)
 foreach(Case ${TestCases})
   add_test(NAME Test${Case} COMMAND ./solver tests/test${Case}.txt)
   file(READ tests/sol${Case}.txt Solution)

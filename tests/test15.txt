@@ -1,0 +1,37 @@
+min 8.3 * alice_a + 10.2 * alice_b + 8.75 * alice_c + 8.1 * badri_a + 12.0 * badri_b + 8.75 * badri_c + 8.3 * cara_a + 100.0 * cara_b + 8.75 * cara_c + 9.3 * dan_a + 8.0 * dan_b +  8.75 * dan_c + 10.1 * emma_a + 10.0 * emma_b + 8.75 * emma_c + 9.8 * fujita_a + 10.0 * fujita_b + 8.75 * fujita_c + 100.0 * grace_a + 8.0 * grace_b + 8.75 * grace_c + 7.5 * helen_a + 10.0 * helen_b + 8.75 * helen_c
+st
+alice_a + alice_b + alice_c = 300
+badri_a + badri_b + badri_c = 400
+cara_a + cara_b + cara_c = 500
+dan_a + dan_b + dan_c = 200
+emma_a + emma_b + emma_c = 300
+fujita_a + fujita_b + fujita_c = 450
+grace_a + grace_b + grace_c = 800
+helen_a + helen_b + helen_c = 180
+alice_a + badri_a + cara_a + dan_a + emma_a + fujita_a + grace_a + helen_a <= 1000
+alice_b + badri_b + cara_b + dan_b + emma_b + fujita_b + grace_b + helen_b <= 800
+alice_c + badri_c + cara_c + dan_c + emma_c + fujita_c + grace_c + helen_c <= 5000
+alice_a >= 0
+alice_b >= 0
+alice_c >= 0
+badri_a >= 0
+badri_b >= 0
+badri_c >= 0
+cara_a >= 0
+cara_b >= 0
+cara_c >= 0
+dan_a >= 0
+dan_b >= 0
+dan_c >= 0
+emma_a >= 0
+emma_b >= 0
+emma_c >= 0
+fujita_a >= 0
+fujita_b >= 0
+fujita_c >= 0
+grace_a >= 0
+grace_b >= 0
+grace_c >= 0
+helen_a >= 0
+helen_b >= 0
+helen_c >= 0

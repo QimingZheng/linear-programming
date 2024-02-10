@@ -161,6 +161,8 @@ void LPModel::Pivot(Variable base, Variable non_base) {
   ReplaceVariableWithExpression(model_.opt_obj.expression, non_base,
                                 substitution);
   for (auto& constraint : model_.constraints) {
+    // TODO(qimingzheng): figure out why replace the following comparison with
+    // .IsZero() doesn't work.
     if (constraint.expression.GetCoeffOf(non_base) == kFloatZero) continue;
     if (constraint.expression.variable_coeff.find(base) ==
         constraint.expression.variable_coeff.end()) {
@@ -176,7 +178,7 @@ void LPModel::Pivot(Variable base, Variable non_base) {
 bool needInitialization(const std::vector<Constraint>& constraints) {
   bool needed = false;
   for (auto constraint : constraints) {
-    if (constraint.expression.constant < 0.0f) {
+    if (constraint.expression.constant < -kEpsilonF) {
       needed = true;
       break;
     }
@@ -235,7 +237,7 @@ Result LPModel::Initialize() {
   }
   // Now, all constraints' constant b is non-negative.
   for (auto constraint : helper_lp.model_.constraints)
-    assert(constraint.expression.constant >= kFloatZero);
+    assert(constraint.expression.constant.IsNonNegative());
 
   // Solve the helper LP problem (can directly goes into phase 2, and the
   // problem must be solvable and bounded).
@@ -244,7 +246,7 @@ Result LPModel::Initialize() {
 
   // If the helper LP problem's solution is nagative, which the raw LP
   // constraints is not satisfiable unless x_{0} is positive .
-  if (helper_lp.GetSimplexOptimum() < kFloatZero) {
+  if (helper_lp.GetSimplexOptimum().IsNegative()) {
     return NOSOLUTION;
   }
 
@@ -314,9 +316,9 @@ Result LPModel::SimplexSolve() {
     Num min_ = kFloatMax;
     for (auto base : base_variables_) {
       for (auto constraint : model_.constraints) {
-        assert(constraint.expression.constant >= kFloatZero);
-        if (constraint.expression.GetCoeffOf(base) != kFloatZero and
-            -constraint.expression.GetCoeffOf(e) > kFloatZero) {
+        assert(constraint.expression.constant.IsNonNegative());
+        if (!constraint.expression.GetCoeffOf(base).IsZero() and
+            constraint.expression.GetCoeffOf(e).IsNegative()) {
           if (min_ > constraint.expression.constant /
                          (-constraint.expression.GetCoeffOf(e))) {
             min_ = constraint.expression.constant /
@@ -420,8 +422,8 @@ bool SlackFormSanityCheck(LPModel model) {
 
 bool LPModel::IsNonNegativeConstraint(const Constraint& constraint) {
   if (constraint.equation_type != Constraint::Type::LE) return false;
-  if (constraint.compare != kFloatZero) return false;
-  if (constraint.expression.constant != kFloatZero) return false;
+  if (!constraint.compare.IsZero()) return false;
+  if (!constraint.expression.constant.IsZero()) return false;
   if (constraint.expression.variable_coeff.size() != 1) return false;
   if (constraint.expression.variable_coeff.begin()->second != Num(-1.0f))
     return false;
@@ -469,13 +471,13 @@ LPModel LPModel::ToDualForm() {
 
 void LPModel::GaussianElimination(std::set<Variable> base_variables) {
   for (auto con : model_.constraints) {
-    assert(con.compare == kFloatZero);
+    assert(con.compare.IsZero());
     assert(con.equation_type == Constraint::Type::EQ);
   }
   for (auto base : base_variables) {
     for (size_t i = 0; i < model_.constraints.size(); i++) {
       Constraint& con = model_.constraints[i];
-      if (con.expression.GetCoeffOf(base) == kFloatZero) continue;
+      if (con.expression.GetCoeffOf(base).IsZero()) continue;
       con.expression *= (1.0f / con.expression.GetCoeffOf(base));
       for (auto& c : model_.constraints) {
         if (c == con) continue;
@@ -515,7 +517,7 @@ Result LPModel::DualSolve(std::set<Variable> dual_feasible_solution_basis) {
     // the base.
     for (auto con : model_.constraints) {
       for (auto base : base_variables_) {
-        if (con.expression.GetCoeffOf(base) != kFloatZero) {
+        if (!con.expression.GetCoeffOf(base).IsZero()) {
           assert(con.expression.GetCoeffOf(base) == kFloatOne);
           if (val >
               -con.expression.constant / con.expression.GetCoeffOf(base)) {
@@ -535,11 +537,11 @@ Result LPModel::DualSolve(std::set<Variable> dual_feasible_solution_basis) {
     Variable n;
     for (auto entry : c.expression.variable_coeff) {
       if (entry.first == b) continue;
-      if (entry.second < kFloatZero) {
+      if (entry.second.IsNegative()) {
         Num r = model_.opt_obj.expression.GetCoeffOf(entry.first);
         for (auto e : base_variables_) {
           for (auto con : model_.constraints) {
-            if (con.expression.GetCoeffOf(e) != kFloatZero) {
+            if (!con.expression.GetCoeffOf(e).IsZero()) {
               r -= model_.opt_obj.expression.GetCoeffOf(e) *
                    con.expression.GetCoeffOf(entry.first);
             }
@@ -600,7 +602,7 @@ Result LPModel::ColumnGenerationSolve() {
     auto artificial = CreateArtificialVariable();
     artificials.insert(artificial);
     non_base_variables_.insert(artificial);
-    if (model_.constraints[i].compare >= kFloatZero) {
+    if (model_.constraints[i].compare.IsNonNegative()) {
       model_.constraints[i].expression += 1.0f * artificial;
     } else {
       model_.constraints[i].expression += -1.0f * artificial;
