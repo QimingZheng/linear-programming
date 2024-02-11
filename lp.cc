@@ -288,13 +288,23 @@ Result LPModel::Initialize() {
 }
 
 Result LPModel::SimplexSolve() {
-  auto res = Initialize();
-  if (res == NOSOLUTION) return NOSOLUTION;
-  assert(res == SOLVED);
+  {
+    Timer timer;
+    auto res = Initialize();
+    timer.Stop();
+    if (enable_logging_)
+      std::cout << "[Initialization]: " << std::to_string(timer.Delta() / 1000)
+                << " ms\n";
+    if (res == NOSOLUTION) return NOSOLUTION;
+    assert(res == SOLVED);
+  }
   assert(needInitialization(model_.constraints) == false);
 
+  int iter = 0;
+  Timer timer;
   // Phase 2: The main optimization procedures.
   while (true) {
+    iter += 1;
     Variable e;
     // Find any non-base variable x_{e} that c_e > 0.
     for (auto& entry : model_.opt_obj.expression.variable_coeff) {
@@ -309,6 +319,9 @@ Result LPModel::SimplexSolve() {
     if (e.IsUndefined()) {
       simplex_optimum_ = GetOptimum();
       simplex_solution_ = GetSolution();
+      timer.Stop();
+      if (enable_logging_)
+        LogIterStatus(iter, timer.Delta(), simplex_optimum_.float_value);
       return SOLVED;
     }
     // Find a base variable x_{d} s.t. A_{d,e} > 0 and minimize b_{d}/A_{d,e}
@@ -335,6 +348,11 @@ Result LPModel::SimplexSolve() {
     }
     // Perform pivot(x_{d}, x_{e})
     Pivot(d, e);
+    if (enable_logging_ && iter % log_every_iters_ == 0) {
+      timer.Stop();
+      LogIterStatus(iter, timer.Delta(), GetOptimum(false).float_value);
+      timer.Reset();
+    }
   }
   return ERROR;
 }
@@ -345,11 +363,13 @@ std::map<Variable, Num> LPModel::GetSimplexSolution() {
   return simplex_solution_;
 }
 
-Num LPModel::GetOptimum() {
-  for (auto& entry : model_.opt_obj.expression.variable_coeff) {
-    if (non_base_variables_.find(entry.first) != non_base_variables_.end() and
-        entry.second > 0.0f) {
-      throw std::runtime_error("Not Solved");
+Num LPModel::GetOptimum(bool check_optimal_condition) {
+  if (check_optimal_condition) {
+    for (auto& entry : model_.opt_obj.expression.variable_coeff) {
+      if (non_base_variables_.find(entry.first) != non_base_variables_.end() and
+          entry.second > 0.0f) {
+        throw std::runtime_error("Not Solved");
+      }
     }
   }
   if (opt_reverted_) return -model_.opt_obj.expression.constant;
@@ -687,4 +707,10 @@ Num LPModel::GetColumnGenerationOptimum() { return column_generation_optimum_; }
 
 std::map<Variable, Num> LPModel::GetColumnGenerationSolution() {
   return column_generation_solution_;
+}
+
+void LPModel::LogIterStatus(int iter, long delta, real_t optimum) {
+  std::cout << "[Iter " + std::to_string(iter) + "]: "
+            << std::to_string(optimum) << " in " << std::to_string(delta / 1000)
+            << "ms\n";
 }

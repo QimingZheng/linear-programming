@@ -340,6 +340,7 @@ struct OptimizationObject {
 class Timer {
  public:
   Timer() { gettimeofday(&start, NULL); }
+  void Reset() { gettimeofday(&start, NULL); }
   void Stop() { gettimeofday(&end, NULL); }
   long Delta() {
     return (end.tv_usec - start.tv_usec) +

@@ -45,6 +45,14 @@ class LPModel {
     model_.opt_obj = obj;
   }
 
+  void SetEnableLogging(bool enable_logging) {
+    enable_logging_ = enable_logging;
+  }
+  void SetLogEvery(int iters) {
+    assert(iters > 0);
+    log_every_iters_ = iters;
+  }
+
   // Transform the LP model to standard form:
   //  1. optimization object: maximization
   //  2. all constraints have the following form:
@@ -126,6 +134,7 @@ class LPModel {
   Variable CreateArtificialVariable();
 
  private:
+  void LogIterStatus(int iter, long delta, real_t optimum);
   // Check if the constraint is in the form of: x >= 0
   bool IsNonNegativeConstraint(const Constraint &constraint);
 
@@ -133,7 +142,7 @@ class LPModel {
   // the coefficients of all non-base variables in the objective function
   // are non-negative. `GetOptimum()`, `GetSolution()` should return its optimal
   // solution accordingly.
-  Num GetOptimum();
+  Num GetOptimum(bool check_optimal_condition = false);
   std::map<Variable, Num> GetSolution();
 
   Model model_;
@@ -161,6 +170,9 @@ class LPModel {
   int substitution_variable_count_ = 0;
   int dual_variable_count_ = 0;
   int artificial_variable_count_ = 0;
+
+  bool enable_logging_ = false;
+  int log_every_iters_ = 1;
 };
 
 bool StandardFormSanityCheck(LPModel model);
