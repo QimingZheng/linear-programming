@@ -140,18 +140,29 @@ OptimizationObject Parser::ParseOptimizationObject(std::vector<Token> tokens) {
 }
 Constraint Parser::ParseConstraint(std::vector<Token> tokens) {
   assert(tokens.size() >= 3);
-  assert(tokens[tokens.size() - 2].type == Token::EQ or
-         tokens[tokens.size() - 2].type == Token::GE or
-         tokens[tokens.size() - 2].type == Token::LE);
+  int compare_symbol_index = -1;
+  for (auto i = 0; i < tokens.size(); i++) {
+    if (tokens[i].type == Token::EQ or tokens[i].type == Token::GE or
+        tokens[i].type == Token::LE) {
+      if (compare_symbol_index < 0)
+        compare_symbol_index = i;
+      else
+        throw std::runtime_error(
+            "More than one compare symbol found in one constraint");
+    }
+  }
+  assert(compare_symbol_index >= 0);
   Constraint ret(FLOAT);
   ret.equation_type =
-      tokens[tokens.size() - 2].type == Token::EQ
+      tokens[compare_symbol_index].type == Token::EQ
           ? Constraint::EQ
-          : (tokens[tokens.size() - 2].type == Token::GE ? Constraint::GE
-                                                         : Constraint::LE);
-  std::vector<Token> exp(tokens.begin(), tokens.begin() + tokens.size() - 2);
-  ret.expression = ParseExpression(exp);
-  ret.expression -= ParseExpression({tokens.back()});
+          : (tokens[compare_symbol_index].type == Token::GE ? Constraint::GE
+                                                            : Constraint::LE);
+  std::vector<Token> lhs(tokens.begin(), tokens.begin() + compare_symbol_index);
+  std::vector<Token> rhs(tokens.begin() + compare_symbol_index + 1,
+                         tokens.end());
+  ret.expression = ParseExpression(lhs);
+  ret.expression -= ParseExpression(rhs);
   return ret;
 }
 Expression Parser::ParseExpression(std::vector<Token> tokens) {
