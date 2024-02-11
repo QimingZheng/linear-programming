@@ -93,9 +93,12 @@ add_test(
   COMMAND parser_test
 )
 
+set(Solvers simplex column_generation)
 set(TestCases 12 13 14 15)
-foreach(Case ${TestCases})
-  add_test(NAME Test${Case} COMMAND ./solver tests/test${Case}.txt)
-  file(READ tests/sol${Case}.txt Solution)
-  set_tests_properties(Test${Case} PROPERTIES PASS_REGULAR_EXPRESSION ${Solution})
+foreach(Solver ${Solvers})
+  foreach(Case ${TestCases})
+    add_test(NAME Test${Case}${Solver} COMMAND ./solver tests/test${Case}.txt ${Solver})
+    file(READ tests/sol${Case}.txt Solution)
+    set_tests_properties(Test${Case}${Solver} PROPERTIES PASS_REGULAR_EXPRESSION ${Solution})
+  endforeach()
 endforeach()
