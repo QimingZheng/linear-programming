@@ -85,7 +85,14 @@ class LPModel {
 
   // Solves the linear programming problem with column generation algorithm:
   // https://en.wikipedia.org/wiki/Column_generation
-  Result ColumnGenerationSolve();
+  Result ColumnGenerationSolve(std::set<Variable> initial_solution_basis = {},
+                               bool initialize_solution_with_two_phase = false);
+
+  void ColumnGenerationInitializeSolutionWithBigM(
+      LPModel& master_problem, std::set<Variable>& artificials);
+
+  void ColumnGenerationInitializeSolutionWithTwoPhase(
+      LPModel& master_problem, std::set<Variable>& artificials);
 
   Num GetColumnGenerationOptimum();
 
@@ -136,7 +143,7 @@ class LPModel {
  private:
   void LogIterStatus(int iter, long delta, real_t optimum);
   // Check if the constraint is in the form of: x >= 0
-  bool IsNonNegativeConstraint(const Constraint &constraint);
+  bool IsNonNegativeConstraint(const Constraint& constraint);
 
   // Suppose the current LP form is the optimal solution, which means:
   // the coefficients of all non-base variables in the objective function

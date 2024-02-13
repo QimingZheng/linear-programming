@@ -609,15 +609,14 @@ std::map<Variable, Num> LPModel::GetDualSolveSolution() {
   return GetSolution();
 }
 
-Result LPModel::ColumnGenerationSolve() {
-  LPModel master_problem;
+void LPModel::ColumnGenerationInitializeSolutionWithBigM(
+    LPModel& master_problem, std::set<Variable>& artificials) {
   // Initialize the initial master problem by adding artificial variables to set
   // up the initial restricted master problem:
   //    max c^T x - \infinity^T y
   //    s.t. Ax +/- y <= b (`+` if (b >= 0) else `-`)
   //      x, y >= 0
   // Then a trivial feasible solution to the raw problem is: x = 0, y = |b|
-  std::set<Variable> artificials;
   for (size_t i = 0; i < model_.constraints.size(); i++) {
     auto artificial = CreateArtificialVariable();
     artificials.insert(artificial);
@@ -645,6 +644,68 @@ Result LPModel::ColumnGenerationSolve() {
   std::set<Variable> added_variables = artificials;
   master_problem.non_base_variables_ = artificials;
   master_problem.non_negative_variables_ = artificials;
+}
+
+void LPModel::ColumnGenerationInitializeSolutionWithTwoPhase(
+    LPModel& master_problem, std::set<Variable>& initial_solution_basis) {
+  LPModel phase_one_model = *this;
+  auto artificial = CreateArtificialVariable();
+  auto opt = OptimizationObject(FLOAT);
+  opt.SetOptType(OptimizationObject::MAX);
+  opt.expression = -1.0 * artificial;
+  phase_one_model.SetOptimizationObject(opt);
+  for (size_t i = 0; i < phase_one_model.model_.constraints.size(); i++) {
+    phase_one_model.model_.constraints[i].expression += -1.0f * artificial;
+  }
+  assert(phase_one_model.ColumnGenerationSolve({artificial}, false) == SOLVED);
+
+  assert(phase_one_model.GetColumnGenerationOptimum().IsZero());
+  for (auto entry : phase_one_model.GetColumnGenerationSolution()) {
+    if (!entry.second.IsZero()) {
+      initial_solution_basis.insert(entry.first);
+    }
+  }
+}
+
+Result LPModel::ColumnGenerationSolve(std::set<Variable> initial_solution_basis,
+                                      bool initialize_solution_with_two_phase) {
+  LPModel master_problem;
+  std::set<Variable> artificials;
+  std::set<Variable> added_variables;
+  if (initial_solution_basis.size() == 0) {
+    if (initialize_solution_with_two_phase) {
+      ColumnGenerationInitializeSolutionWithTwoPhase(master_problem,
+                                                     initial_solution_basis);
+    }
+  }
+  if (initial_solution_basis.size() != 0) {
+    added_variables = initial_solution_basis;
+    OptimizationObject opt = model_.opt_obj;
+    for (auto entry : model_.opt_obj.expression.variable_coeff) {
+      if (initial_solution_basis.find(entry.first) ==
+          initial_solution_basis.end())
+        opt.expression.SetCoeffOf(entry.first, 0);
+    }
+    master_problem.SetOptimizationObject(opt);
+    for (auto constraint : model_.constraints) {
+      Constraint con = constraint;
+      for (auto entry : constraint.expression.variable_coeff) {
+        if (initial_solution_basis.find(entry.first) ==
+            initial_solution_basis.end()) {
+          con.expression.SetCoeffOf(entry.first, 0);
+        }
+      }
+      master_problem.AddConstraint(con);
+    }
+    master_problem.opt_reverted_ = opt_reverted_;
+    master_problem.non_base_variables_ = initial_solution_basis;
+    master_problem.non_negative_variables_ = initial_solution_basis;
+  } else {
+    if (!initialize_solution_with_two_phase) {
+      ColumnGenerationInitializeSolutionWithBigM(master_problem, artificials);
+      added_variables = artificials;
+    }
+  }
   while (true) {
     // Step 1: solve the dual problem:
     LPModel dual_problem = master_problem.ToDualForm();
@@ -690,10 +751,14 @@ Result LPModel::ColumnGenerationSolve() {
     master_problem.non_negative_variables_.insert(to_be_added);
     added_variables.insert(to_be_added);
   }
-  for (auto art : artificials) {
-    master_problem.model_.opt_obj.expression.SetCoeffOf(art, kFloatZero);
-    for (auto& con : master_problem.model_.constraints) {
-      con.expression.SetCoeffOf(art, kFloatZero);
+  if (initial_solution_basis.size() == 0) {
+    if (!initialize_solution_with_two_phase) {
+      for (auto art : artificials) {
+        master_problem.model_.opt_obj.expression.SetCoeffOf(art, kFloatZero);
+        for (auto& con : master_problem.model_.constraints) {
+          con.expression.SetCoeffOf(art, kFloatZero);
+        }
+      }
     }
   }
   master_problem.ToSlackForm();
