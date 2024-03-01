@@ -76,6 +76,9 @@ class LPModel {
 
   std::map<Variable, Num> GetSimplexSolution();
 
+  // The extreme ray is an unbounded direction.
+  std::map<Variable, Num> GetSimplexExtremeRay();
+
   /* The Dual Simplex Method. */
   Result DualSolve(std::set<Variable> dual_feasible_solution_basis);
 
@@ -164,6 +167,7 @@ class LPModel {
   // The solution of simplex method.
   Num simplex_optimum_;
   std::map<Variable, Num> simplex_solution_;
+  std::map<Variable, Num> simplex_extreme_ray_;
 
   // The solution of dual simplex method.
   Num dual_simplex_optimum_;

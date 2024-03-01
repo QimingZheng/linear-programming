@@ -131,6 +131,42 @@ TEST(LPModel, Solve) {
   EXPECT_EQ(model.GetSimplexSolution(), sol);
 }
 
+TEST(LPModel, ExtremeRay) {
+  Parser parser;
+  std::ifstream file("tests/test20.txt");
+  LPModel model = parser.Parse(file);
+  Variable x1("x1"), x2("x2");
+  model.ToStandardForm();
+  model.ToSlackForm();
+
+  EXPECT_EQ(model.SimplexSolve(), Result::UNBOUNDED);
+  auto actual_ray = model.GetSimplexExtremeRay();
+  auto expected_ray = std::map<Variable, Num>({{x1, 6.0f}, {x2, 2.0f}});
+  for (auto entry : expected_ray) {
+    EXPECT_EQ(actual_ray.find(entry.first) != actual_ray.end(), true);
+    EXPECT_LE(entry.second - actual_ray[entry.first], 1e-6f);
+    EXPECT_GE(entry.second - actual_ray[entry.first], -1e-6f);
+  }
+}
+
+TEST(LPModel, ExtremeRay2) {
+  Parser parser;
+  std::ifstream file("tests/test21.txt");
+  LPModel model = parser.Parse(file);
+  Variable x1("x1"), x2("x2");
+  model.ToStandardForm();
+  model.ToSlackForm();
+
+  EXPECT_EQ(model.SimplexSolve(), Result::UNBOUNDED);
+  auto actual_ray = model.GetSimplexExtremeRay();
+  auto expected_ray = std::map<Variable, Num>({{x1, 0.0f}, {x2, 1.0f}});
+  for (auto entry : expected_ray) {
+    EXPECT_EQ(actual_ray.find(entry.first) != actual_ray.end(), true);
+    EXPECT_LE(entry.second - actual_ray[entry.first], 1e-6f);
+    EXPECT_GE(entry.second - actual_ray[entry.first], -1e-6f);
+  }
+}
+
 TEST(LPModel, Initialization) {
   // Test the two phase algorithm.
   /*

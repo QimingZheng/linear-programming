@@ -209,6 +209,9 @@ Result LPModel::SimplexSolve() {
     // If x_{d} is not found, which means the optimum is unbounded (by assigning
     // x_{e} as +infinity, and all other non-base as 0).
     if (d.IsUndefined()) {
+      simplex_extreme_ray_ = GetSolution();
+      if (simplex_extreme_ray_.find(e) != simplex_extreme_ray_.end())
+        simplex_extreme_ray_[e] = kFloatOne;
       return UNBOUNDED;
     }
     // Perform pivot(x_{d}, x_{e})
@@ -226,4 +229,8 @@ Num LPModel::GetSimplexOptimum() { return simplex_optimum_; }
 
 std::map<Variable, Num> LPModel::GetSimplexSolution() {
   return simplex_solution_;
+}
+
+std::map<Variable, Num> LPModel::GetSimplexExtremeRay() {
+  return simplex_extreme_ray_;
 }
