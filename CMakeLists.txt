@@ -21,7 +21,7 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/tests/)
 
 include_directories(headers base.h parser.h ilp.h lp.h)
-add_library(lp_library SHARED lp.cc ilp.cc parser.cc base.cc)
+add_library(lp_library SHARED lp.cc ilp.cc parser.cc base.cc lp_simplex.cc lp_column_generation.cc lp_dual_simplex.cc)
 
 add_executable(solver solver.cc)
 target_include_directories(solver PRIVATE headers)
