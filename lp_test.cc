@@ -141,7 +141,7 @@ TEST(LPModel, ExtremeRay) {
 
   EXPECT_EQ(model.SimplexSolve(), Result::UNBOUNDED);
   auto actual_ray = model.GetSimplexExtremeRay();
-  auto expected_ray = std::map<Variable, Num>({{x1, 6.0f}, {x2, 2.0f}});
+  auto expected_ray = std::map<Variable, Num>({{x1, 1.0f}, {x2, 2.0f}});
   for (auto entry : expected_ray) {
     EXPECT_EQ(actual_ray.find(entry.first) != actual_ray.end(), true);
     EXPECT_LE(entry.second - actual_ray[entry.first], 1e-6f);

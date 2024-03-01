@@ -154,6 +154,7 @@ class LPModel {
   // solution accordingly.
   Num GetOptimum(bool check_optimal_condition = false);
   std::map<Variable, Num> GetSolution();
+  std::map<Variable, Num> GetRay(Variable non_basis_var);
 
   Model model_;
   std::set<Variable> base_variables_;

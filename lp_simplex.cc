@@ -209,9 +209,7 @@ Result LPModel::SimplexSolve() {
     // If x_{d} is not found, which means the optimum is unbounded (by assigning
     // x_{e} as +infinity, and all other non-base as 0).
     if (d.IsUndefined()) {
-      simplex_extreme_ray_ = GetSolution();
-      if (simplex_extreme_ray_.find(e) != simplex_extreme_ray_.end())
-        simplex_extreme_ray_[e] = kFloatOne;
+      simplex_extreme_ray_ = GetRay(e);
       return UNBOUNDED;
     }
     // Perform pivot(x_{d}, x_{e})
@@ -233,4 +231,34 @@ std::map<Variable, Num> LPModel::GetSimplexSolution() {
 
 std::map<Variable, Num> LPModel::GetSimplexExtremeRay() {
   return simplex_extreme_ray_;
+}
+
+std::map<Variable, Num> LPModel::GetRay(Variable non_basis_var) {
+  std::map<Variable, Num> all_sol;
+  std::map<Variable, Num> sol;
+  for (auto var : non_base_variables_) {
+    all_sol[var] = (var == non_basis_var) ? 1.0f : 0.0f;
+    if (IsUserDefined(var)) sol[var] = (var == non_basis_var) ? 1.0f : 0.0f;
+  }
+  for (auto base : base_variables_) {
+    for (auto constraint : model_.constraints) {
+      if (constraint.expression.GetCoeffOf(base) != 0.0f) {
+        all_sol[base] = -constraint.expression.GetCoeffOf(non_basis_var) /
+                        constraint.expression.GetCoeffOf(base);
+        if (IsUserDefined(base))
+          sol[base] = -constraint.expression.GetCoeffOf(non_basis_var) /
+                      constraint.expression.GetCoeffOf(base);
+      }
+    }
+  }
+  for (auto entry : raw_variable_expression_) {
+    auto raw_var = entry.first;
+    auto exp = entry.second;
+    while (exp.variable_coeff.size() > 0) {
+      auto entry = *exp.variable_coeff.begin();
+      ReplaceVariableWithExpression(exp, entry.first, all_sol[entry.first]);
+    }
+    sol[raw_var] = exp.constant;
+  }
+  return sol;
 }
