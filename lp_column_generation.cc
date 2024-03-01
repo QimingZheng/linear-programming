@@ -56,6 +56,15 @@ void LPModel::ColumnGenerationInitializeSolutionWithTwoPhase(
       initial_solution_basis.insert(entry.first);
     }
   }
+  // special case: \vec 0 is a feasible solution to the phase 1 problem.
+  if (initial_solution_basis.size() == 0) {
+    for (auto entry : phase_one_model.GetColumnGenerationSolution()) {
+      if (entry.first != artificial) {
+        initial_solution_basis.insert(entry.first);
+        break;
+      }
+    }
+  }
 }
 
 Result LPModel::ColumnGenerationSolve(std::set<Variable> initial_solution_basis,

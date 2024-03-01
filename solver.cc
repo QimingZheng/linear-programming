@@ -90,7 +90,7 @@ int main(int argc, char **argv) {
 
       case COLUMN_GENERATION: {
         lp_model.ToStandardForm();
-        result = lp_model.ColumnGenerationSolve({}, false);
+        result = lp_model.ColumnGenerationSolve({}, true);
         if (result == Result::SOLVED) {
           optimum = lp_model.GetColumnGenerationOptimum();
           solution = lp_model.GetColumnGenerationSolution();
