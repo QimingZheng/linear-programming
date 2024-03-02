@@ -165,6 +165,12 @@ class LPModel {
   std::set<Variable> non_negative_variables_;
   std::map<Variable, Expression> raw_variable_expression_;
 
+  // Variables that are overrided as user defined vars (usually used in method
+  // ToDualForm).
+  std::set<Variable> overrided_as_user_defined_variables_;
+  void OverrideAsUserDefined(Variable var);
+  bool IsOverriddenAsUserDefined(Variable var);
+
   // The solution of simplex method.
   Num simplex_optimum_;
   std::map<Variable, Num> simplex_solution_;

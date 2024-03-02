@@ -10,6 +10,15 @@ bool operator!=(const Variable &lhs, const Variable &rhs) {
 
 bool operator<(const Variable &lhs, const Variable &rhs) {
   if (lhs.type != rhs.type) return lhs.type < rhs.type;
+  auto startwith = [](std::string str, std::string pattern) -> bool {
+    return str.find(pattern) == 0;
+  };
+  const int dual_prefix_len = 4;
+  if (startwith(lhs.variable_name, "dual") and
+      startwith(rhs.variable_name, "dual")) {
+    return stoi(lhs.variable_name.substr(dual_prefix_len)) <
+           stoi(rhs.variable_name.substr(dual_prefix_len));
+  }
   return lhs.variable_name < rhs.variable_name;
 }
 

@@ -7,6 +7,15 @@ bool IsUserDefined(Variable var) {
          var.variable_name.rfind(kArtificial, 0) != 0;
 }
 
+void LPModel::OverrideAsUserDefined(Variable var) {
+  overrided_as_user_defined_variables_.insert(var);
+}
+
+bool LPModel::IsOverriddenAsUserDefined(Variable var) {
+  return overrided_as_user_defined_variables_.find(var) !=
+         overrided_as_user_defined_variables_.end();
+}
+
 Variable LPModel::CreateBaseVariable() {
   auto var = Variable(kBase + std::to_string(base_variable_count_));
   base_variable_count_ += 1;
@@ -153,14 +162,14 @@ std::map<Variable, Num> LPModel::GetSolution() {
   std::map<Variable, Num> sol;
   for (auto var : non_base_variables_) {
     all_sol[var] = 0.0f;
-    if (IsUserDefined(var)) sol[var] = 0.0f;
+    if (IsUserDefined(var) or IsOverriddenAsUserDefined(var)) sol[var] = 0.0f;
   }
   for (auto base : base_variables_) {
     for (auto constraint : model_.constraints) {
       if (constraint.expression.GetCoeffOf(base) != 0.0f) {
         all_sol[base] = -constraint.expression.constant /
                         constraint.expression.GetCoeffOf(base);
-        if (IsUserDefined(base))
+        if (IsUserDefined(base) or IsOverriddenAsUserDefined(base))
           sol[base] = -constraint.expression.constant /
                       constraint.expression.GetCoeffOf(base);
       }
@@ -239,6 +248,7 @@ LPModel LPModel::ToDualForm() {
   for (auto con : model_.constraints) {
     Variable y = CreateDualVariable();
     ys.push_back(y);
+    dual.OverrideAsUserDefined(y);
     dual.model_.opt_obj.expression += con.compare * y;
   }
   dual.model_.opt_obj.opt_type = OptimizationObject::Type::MIN;

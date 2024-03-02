@@ -43,7 +43,7 @@ void LPModel::Pivot(Variable base, Variable non_base) {
 bool needInitialization(const std::vector<Constraint>& constraints) {
   bool needed = false;
   for (auto constraint : constraints) {
-    if (constraint.expression.constant < -kEpsilonF) {
+    if (constraint.expression.constant.IsNegative()) {
       needed = true;
       break;
     }
@@ -63,8 +63,8 @@ Result LPModel::Initialize() {
   //  max -x_{0}
   //  s.t.
   //    x_{i} >=0 \forall 0 <= i <= n + m
-  //    x_{j} = b_{j} - \sum A_{j, k} x_{k} (x_{k} is non-basis) \forall j \in
-  //    basis
+  //    x_{j} = b_{j} - \sum A_{j, k} x_{k} (x_{k} is non-basis) + x_{0} \forall
+  //    j \in basis
   LPModel helper_lp;
   Variable artificial_var = CreateArtificialVariable();
   for (auto constraint : model_.constraints) {
@@ -174,7 +174,7 @@ Result LPModel::SimplexSolve() {
     // Find any non-base variable x_{e} that c_e > 0.
     for (auto& entry : model_.opt_obj.expression.variable_coeff) {
       if (non_base_variables_.find(entry.first) != non_base_variables_.end() and
-          entry.second > 0.0f) {
+          entry.second.IsPositive()) {
         e = entry.first;
         break;
       }
@@ -238,14 +238,15 @@ std::map<Variable, Num> LPModel::GetRay(Variable non_basis_var) {
   std::map<Variable, Num> sol;
   for (auto var : non_base_variables_) {
     all_sol[var] = (var == non_basis_var) ? 1.0f : 0.0f;
-    if (IsUserDefined(var)) sol[var] = (var == non_basis_var) ? 1.0f : 0.0f;
+    if (IsUserDefined(var) or IsOverriddenAsUserDefined(var))
+      sol[var] = (var == non_basis_var) ? 1.0f : 0.0f;
   }
   for (auto base : base_variables_) {
     for (auto constraint : model_.constraints) {
       if (constraint.expression.GetCoeffOf(base) != 0.0f) {
         all_sol[base] = -constraint.expression.GetCoeffOf(non_basis_var) /
                         constraint.expression.GetCoeffOf(base);
-        if (IsUserDefined(base))
+        if (IsUserDefined(base) or IsOverriddenAsUserDefined(base))
           sol[base] = -constraint.expression.GetCoeffOf(non_basis_var) /
                       constraint.expression.GetCoeffOf(base);
       }

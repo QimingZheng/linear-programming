@@ -110,6 +110,17 @@ struct Num {
     }
   }
 
+  bool IsPositive() const {
+    switch (type) {
+      case FLOAT:
+        return float_value >= kEpsilonF;
+      case INTEGER:
+        return int_value >= 0;
+      default:
+        throw std::runtime_error("IsZero error\n");
+    }
+  }
+
   std::string ToString() const {
     switch (type) {
       case FLOAT:
