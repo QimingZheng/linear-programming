@@ -106,7 +106,6 @@ Result LPModel::ColumnGenerationSolve(std::set<Variable> initial_solution_basis,
       added_variables = artificials;
     }
   }
-  bool has_solved = false;
   while (true) {
     // Step 1: solve the dual problem:
     LPModel dual_problem = master_problem.ToDualForm();
@@ -115,13 +114,9 @@ Result LPModel::ColumnGenerationSolve(std::set<Variable> initial_solution_basis,
     auto result = dual_problem.SimplexSolve();
     if (result == NOSOLUTION) return UNBOUNDED;
     if (result == UNBOUNDED) {
-      if (!has_solved)
-        return NOSOLUTION;
-      else
-        break;
+      return NOSOLUTION;
     }
     assert(result == SOLVED);
-    has_solved = true;
     auto sol = dual_problem.GetSimplexSolution();
     // Pricing problem: Find a non-base x_{j} with maximized reduced cost,
     // where the pricing objective function is: c_{j} - u^T b (u is the solution
