@@ -22,8 +22,14 @@ target_link_libraries(GTest::GTest INTERFACE gtest_main gmock_main)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/tests/)
 
-include_directories(headers base.h parser.h ilp.h lp.h)
-add_library(lp_library SHARED lp.cc ilp.cc parser.cc base.cc lp_simplex.cc lp_column_generation.cc lp_dual_simplex.cc lp_primal_path_following.cc)
+file(GLOB HEADERS *.h)
+file(GLOB TEST_SRCS *_test.cc)
+file(GLOB SRCS *.cc)
+list(FILTER SRCS EXCLUDE REGEX ".*test\.cc$")
+list(FILTER SRCS EXCLUDE REGEX "solver\.cc")
+
+include_directories(headers ${HEADERS})
+add_library(lp_library SHARED ${SRCS})
 target_link_libraries(lp_library Eigen3::Eigen)
 
 add_executable(solver solver.cc)
@@ -32,85 +38,27 @@ target_link_libraries(solver lp_library)
 
 enable_testing()
 
-add_executable(
-  lp_test
-  lp_test.cc
-)
-target_include_directories(lp_test PRIVATE headers)
-target_link_libraries(
-  lp_test
-  GTest::GTest
-  lp_library
-)
-
-add_test(
-  NAME lp_test
-  COMMAND lp_test
-)
-
-add_executable(
-  lp_primal_path_following_test
-  lp_primal_path_following_test.cc
-)
-target_include_directories(lp_primal_path_following_test PRIVATE headers)
-target_link_libraries(
-  lp_primal_path_following_test
-  GTest::GTest
-  lp_library
-)
-
-add_test(
-  NAME lp_primal_path_following_test
-  COMMAND lp_primal_path_following_test
-)
-
-add_executable(
-  ilp_test
-  ilp_test.cc
-)
-target_include_directories(ilp_test PRIVATE headers)
-target_link_libraries(
-  ilp_test
-  GTest::GTest
-  lp_library
-)
-
-add_test(
-  NAME ilp_test
-  COMMAND ilp_test
-)
-
-add_executable(
-  base_test
-  base_test.cc
-)
-target_include_directories(base_test PRIVATE headers)
-target_link_libraries(
-  base_test
-  GTest::GTest
-  lp_library
-)
-
-add_test(
-  NAME base_test
-  COMMAND base_test
-)
-
-add_executable(
-  parser_test
-  parser_test.cc
-)
-target_include_directories(parser_test PRIVATE headers)
-target_link_libraries(
-  parser_test
-  GTest::GTest
-  lp_library
-)
-
-add_test(
-  NAME parser_test
-  COMMAND parser_test
-)
+foreach(test_src ${TEST_SRCS})
+  string(FIND ${test_src} "/" start REVERSE)
+  string(FIND ${test_src} ".cc" end)
+  MATH(EXPR begin "${start}+1")
+  MATH(EXPR length "${end}-${start}-1")
+  string(SUBSTRING ${test_src} ${begin} ${length} test_name)
+  add_executable(
+    ${test_name}
+    ${test_src}
+  )
+  target_include_directories(${test_name} PRIVATE headers)
+  target_link_libraries(
+    ${test_name}
+    GTest::GTest
+    lp_library
+  )
+  add_test(
+    NAME ${test_name}
+    COMMAND ${test_name}
+  )
+endforeach()
 
 set(TestCases 12 13 14 15 16 17)
 foreach(Case ${TestCases})
