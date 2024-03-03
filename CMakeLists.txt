@@ -5,6 +5,8 @@ project(
   VERSION 1.0
   LANGUAGES CXX)
 
+find_package (Eigen3 REQUIRED NO_MODULE)
+ 
 set (CMAKE_CXX_STANDARD 11)
 string(REPLACE "-DNDEBUG" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 
@@ -21,7 +23,8 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/tests/)
 
 include_directories(headers base.h parser.h ilp.h lp.h)
-add_library(lp_library SHARED lp.cc ilp.cc parser.cc base.cc lp_simplex.cc lp_column_generation.cc lp_dual_simplex.cc)
+add_library(lp_library SHARED lp.cc ilp.cc parser.cc base.cc lp_simplex.cc lp_column_generation.cc lp_dual_simplex.cc lp_primal_path_following.cc)
+target_link_libraries(lp_library Eigen3::Eigen)
 
 add_executable(solver solver.cc)
 target_include_directories(solver PRIVATE headers)
@@ -43,6 +46,22 @@ target_link_libraries(
 add_test(
   NAME lp_test
   COMMAND lp_test
+)
+
+add_executable(
+  lp_primal_path_following_test
+  lp_primal_path_following_test.cc
+)
+target_include_directories(lp_primal_path_following_test PRIVATE headers)
+target_link_libraries(
+  lp_primal_path_following_test
+  GTest::GTest
+  lp_library
+)
+
+add_test(
+  NAME lp_primal_path_following_test
+  COMMAND lp_primal_path_following_test
 )
 
 add_executable(

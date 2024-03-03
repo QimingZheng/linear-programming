@@ -276,3 +276,20 @@ void LPModel::LogIterStatus(int iter, long delta, real_t optimum) {
             << std::to_string(optimum) << " in " << std::to_string(delta / 1000)
             << "ms\n";
 }
+
+// Convert the constraints to its matrix form.
+Eigen::MatrixXd LPModel::ToMatrixForm() {
+  int variable_num = non_base_variables_.size();
+  int constraint_num = model_.constraints.size();
+  Eigen::MatrixXd A(constraint_num, variable_num);
+  int col = 0;
+  for (auto var : non_base_variables_) {
+    int row = 0;
+    for (auto con : model_.constraints) {
+      A(row, col) = con.expression.GetCoeffOf(var).float_value;
+      row += 1;
+    }
+    col += 1;
+  }
+  return A;
+}

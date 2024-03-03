@@ -11,6 +11,8 @@
 
 #include <assert.h>
 
+#include <Eigen/Dense>
+
 #include "base.h"
 
 const std::string kBase = "base";
@@ -86,8 +88,9 @@ class LPModel {
 
   std::map<Variable, Num> GetDualSolveSolution();
 
-  // Solves the linear programming problem with column generation algorithm:
-  // https://en.wikipedia.org/wiki/Column_generation
+  /* Solves the linear programming problem with column generation algorithm:
+   * https://en.wikipedia.org/wiki/Column_generation
+   */
   Result ColumnGenerationSolve(std::set<Variable> initial_solution_basis = {},
                                bool initialize_solution_with_two_phase = false);
 
@@ -100,6 +103,27 @@ class LPModel {
   Num GetColumnGenerationOptimum();
 
   std::map<Variable, Num> GetColumnGenerationSolution();
+
+  /* The primal version of the interior-point-method: path-following algorithm
+   */
+  struct PrimalPathFollowingInitialSolution {
+    Eigen::VectorXd x;
+    Eigen::VectorXd p;
+    Eigen::VectorXd s;
+    real_t mu;
+    real_t alpha;
+    real_t multiplier;
+  };
+
+  PrimalPathFollowingInitialSolution InitializePrimalPathFollowingSolution(
+      Num epsilon, Variable x1, Variable x2);
+
+  Result PrimalPathFollowingSolve(
+      Num epsilon, PrimalPathFollowingInitialSolution initial_solution);
+
+  Num GetPrimalPathFollowingOptimum();
+
+  std::map<Variable, Num> GetPrimalPathFollowingSolution();
 
   // Mark as virtual for the convenience of testing.
   virtual bool IsBaseVariable(Variable var) {
@@ -183,6 +207,14 @@ class LPModel {
   // The solution of column generation method.
   Num column_generation_optimum_;
   std::map<Variable, Num> column_generation_solution_;
+
+  // The solution of primal path following method.
+  Num primal_path_following_optimum_;
+  std::map<Variable, Num> primal_path_following_solution_;
+  PrimalPathFollowingInitialSolution primal_path_following_step_;
+
+  // Convert the constraints to its matrix form.
+  Eigen::MatrixXd ToMatrixForm();
 
   int base_variable_count_ = 0;
   int substitution_variable_count_ = 0;
