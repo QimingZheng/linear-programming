@@ -12,6 +12,7 @@
 #include <assert.h>
 
 #include <Eigen/Dense>
+#include <unsupported/Eigen/MatrixFunctions>
 
 #include "base.h"
 
@@ -115,6 +116,9 @@ class LPModel {
     real_t multiplier;
   };
 
+  bool IsValidPrimalPathFollowingInitialSolution(
+      PrimalPathFollowingInitialSolution sol);
+
   PrimalPathFollowingInitialSolution InitializePrimalPathFollowingSolution(
       Num epsilon, Variable x1, Variable x2);
 
@@ -124,6 +128,32 @@ class LPModel {
   Num GetPrimalPathFollowingOptimum();
 
   std::map<Variable, Num> GetPrimalPathFollowingSolution();
+
+  /* The primal-dual version version of the interior-point-method:
+   * path-following algorithm */
+  struct PrimalDualPathFollowingInitialSolution {
+    Eigen::VectorXd x;
+    Eigen::VectorXd p;
+    Eigen::VectorXd s;
+    real_t mu;
+    real_t alpha;
+    real_t rho;
+    real_t multiplier;
+  };
+
+  bool IsValidPrimalDualPathFollowingInitialSolution(
+      PrimalDualPathFollowingInitialSolution sol);
+
+  PrimalDualPathFollowingInitialSolution
+  InitializePrimalDualPathFollowingSolution(Num epsilon, Variable tao,
+                                            Variable theta, Variable karpa);
+
+  Result PrimalDualPathFollowingSolve(
+      Num epsilon, PrimalDualPathFollowingInitialSolution initial_solution);
+
+  Num GetPrimalDualPathFollowingOptimum();
+
+  std::map<Variable, Num> GetPrimalDualPathFollowingSolution();
 
   // Mark as virtual for the convenience of testing.
   virtual bool IsBaseVariable(Variable var) {
@@ -211,10 +241,19 @@ class LPModel {
   // The solution of primal path following method.
   Num primal_path_following_optimum_;
   std::map<Variable, Num> primal_path_following_solution_;
-  PrimalPathFollowingInitialSolution primal_path_following_step_;
 
+  // The solution of primal-dual path following method.
+  Num primal_dual_path_following_optimum_;
+  std::map<Variable, Num> primal_dual_path_following_solution_;
+
+  // The representation of the LP model in matrix form.
+  struct MatrixForm {
+    Eigen::MatrixXd coefficient_mat;
+    Eigen::VectorXd cost_vec;
+    Eigen::VectorXd bound_vec;
+  };
   // Convert the constraints to its matrix form.
-  Eigen::MatrixXd ToMatrixForm();
+  MatrixForm ToMatrixForm();
 
   int base_variable_count_ = 0;
   int substitution_variable_count_ = 0;

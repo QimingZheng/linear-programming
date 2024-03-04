@@ -19,6 +19,12 @@ bool operator<(const Variable &lhs, const Variable &rhs) {
     return stoi(lhs.variable_name.substr(dual_prefix_len)) <
            stoi(rhs.variable_name.substr(dual_prefix_len));
   }
+  const int artificial_prefix_len = 10;
+  if (startwith(lhs.variable_name, "artificial") and
+      startwith(rhs.variable_name, "artificial")) {
+    return stoi(lhs.variable_name.substr(artificial_prefix_len)) <
+           stoi(rhs.variable_name.substr(artificial_prefix_len));
+  }
   return lhs.variable_name < rhs.variable_name;
 }
 

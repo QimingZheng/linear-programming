@@ -278,10 +278,12 @@ void LPModel::LogIterStatus(int iter, long delta, real_t optimum) {
 }
 
 // Convert the constraints to its matrix form.
-Eigen::MatrixXd LPModel::ToMatrixForm() {
+LPModel::MatrixForm LPModel::ToMatrixForm() {
   int variable_num = non_base_variables_.size();
   int constraint_num = model_.constraints.size();
   Eigen::MatrixXd A(constraint_num, variable_num);
+  Eigen::VectorXd c(variable_num);
+  Eigen::VectorXd b(constraint_num);
   int col = 0;
   for (auto var : non_base_variables_) {
     int row = 0;
@@ -291,5 +293,19 @@ Eigen::MatrixXd LPModel::ToMatrixForm() {
     }
     col += 1;
   }
-  return A;
+  col = 0;
+  for (auto var : non_base_variables_) {
+    c(col) = model_.opt_obj.expression.GetCoeffOf(var).float_value;
+    col += 1;
+  }
+  col = 0;
+  for (auto con : model_.constraints) {
+    b(col) = -con.expression.constant.float_value;
+    col += 1;
+  }
+  return {
+      A,
+      c,
+      b,
+  };
 }

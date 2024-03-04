@@ -1,19 +1,20 @@
 #include "lp.h"
 
-bool IsEmptyInitialSolution(
-    LPModel::PrimalPathFollowingInitialSolution initial_solution) {
-  if (initial_solution.x.size() == 0) return true;
-  if (initial_solution.p.size() == 0) return true;
-  if (initial_solution.s.size() == 0) return true;
+bool LPModel::IsValidPrimalPathFollowingInitialSolution(
+    PrimalPathFollowingInitialSolution initial_solution) {
+  if (initial_solution.x.size() == 0) return false;
+  if (initial_solution.p.size() == 0) return false;
+  if (initial_solution.s.size() == 0) return false;
   for (size_t i = 0; i < initial_solution.x.size(); i++) {
-    if (initial_solution.x(i) < 0) return true;
+    if (initial_solution.x(i) < 0) return false;
   }
   for (size_t i = 0; i < initial_solution.s.size(); i++) {
-    if (initial_solution.s(i) < 0) return true;
+    if (initial_solution.s(i) < 0) return false;
   }
-  if (initial_solution.mu <= 0.0) return true;
-  if (initial_solution.alpha < 0.0 or initial_solution.alpha > 1.0) return true;
-  return false;
+  if (initial_solution.mu <= 0.0) return false;
+  if (initial_solution.alpha < 0.0 or initial_solution.alpha > 1.0)
+    return false;
+  return true;
 }
 
 LPModel::PrimalPathFollowingInitialSolution
@@ -102,7 +103,7 @@ Result LPModel::PrimalPathFollowingSolve(
     Num epsilon, PrimalPathFollowingInitialSolution initial_solution) {
   non_base_variables_.insert(base_variables_.begin(), base_variables_.end());
   Variable x1, x2;
-  if (IsEmptyInitialSolution(initial_solution)) {
+  if (!IsValidPrimalPathFollowingInitialSolution(initial_solution)) {
     // Check the formulation:
     if (model_.opt_obj.opt_type == OptimizationObject::MAX) {
       model_.opt_obj.SetOptType(OptimizationObject::MIN);
@@ -115,15 +116,11 @@ Result LPModel::PrimalPathFollowingSolve(
   }
   int variable_num = non_base_variables_.size();
   int constraint_num = model_.constraints.size();
-  Eigen::MatrixXd A = ToMatrixForm();
+  auto matrix_form = ToMatrixForm();
+  Eigen::MatrixXd A = matrix_form.coefficient_mat;
   Eigen::VectorXd e = Eigen::VectorXd::Ones(variable_num);
-  Eigen::VectorXd c = Eigen::VectorXd::Zero(variable_num);
+  Eigen::VectorXd c = matrix_form.cost_vec;
   Eigen::MatrixXd I = e.asDiagonal().toDenseMatrix();
-  int i = 0;
-  for (auto var : non_base_variables_) {
-    c(i) = model_.opt_obj.expression.GetCoeffOf(var).float_value;
-    i += 1;
-  }
   auto x = initial_solution.x;
   auto s = initial_solution.s;
   auto p = initial_solution.p;
@@ -146,7 +143,7 @@ Result LPModel::PrimalPathFollowingSolve(
     p = newton_step;
     s = c - A.transpose() * newton_step;
   }
-  i = 0;
+  int i = 0;
   for (auto var : non_base_variables_) {
     if (IsUserDefined(var) or IsOverriddenAsUserDefined(var))
       primal_path_following_solution_[var] = x(i) * initial_solution.multiplier;
