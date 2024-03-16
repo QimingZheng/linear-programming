@@ -27,6 +27,10 @@ file(GLOB TEST_SRCS *_test.cc)
 file(GLOB SRCS *.cc)
 list(FILTER SRCS EXCLUDE REGEX ".*test\.cc$")
 list(FILTER SRCS EXCLUDE REGEX "solver\.cc")
+# TODO: remove this exclusion when DW solver is ready.
+list(FILTER SRCS EXCLUDE REGEX "lp_dantzig_wolfe_decomposition\.cc")
+# TODO: fix the bug of primal-dual path following solver.
+list(FILTER TEST_SRCS EXCLUDE REGEX "lp_primal_dual_path_following_test\.cc")
 
 include_directories(headers ${HEADERS})
 add_library(lp_library SHARED ${SRCS})

@@ -82,6 +82,23 @@ class LPModel {
   // The extreme ray is an unbounded direction.
   std::map<Variable, Num> GetSimplexExtremeRay();
 
+  /* The revised simplex method. See:
+   * https://en.wikipedia.org/wiki/Revised_simplex_method */
+ private:
+  struct RevisedSimplexMatrixForm;
+
+ public:
+  int RevisedSimplexFindLeavingVariable(RevisedSimplexMatrixForm matrix_form,
+                                        int entering_ind);
+
+  void RevisedSimplexPivot(int base_ind, int non_base_ind);
+
+  Result RevisedSimplexSolve();
+
+  Num GetRevisedSimplexOptimum();
+
+  std::map<Variable, Num> GetRevisedSimplexSolution();
+
   /* The Dual Simplex Method. */
   Result DualSolve(std::set<Variable> dual_feasible_solution_basis);
 
@@ -230,6 +247,10 @@ class LPModel {
   std::map<Variable, Num> simplex_solution_;
   std::map<Variable, Num> simplex_extreme_ray_;
 
+  // The solutionn of simplex method.
+  Num revised_simplex_optimum_;
+  std::map<Variable, Num> revised_simplex_solution_;
+
   // The solution of dual simplex method.
   Num dual_simplex_optimum_;
   std::map<Variable, Num> dual_simplex_solution_;
@@ -254,6 +275,16 @@ class LPModel {
   };
   // Convert the constraints to its matrix form.
   MatrixForm ToMatrixForm();
+  // The representation of the LP model in matrix form for revised simplex
+  // method.
+  struct RevisedSimplexMatrixForm {
+    Eigen::MatrixXd basis_coefficient_mat;
+    Eigen::MatrixXd non_basis_coefficient_mat;
+    Eigen::VectorXd basis_cost_vec;
+    Eigen::VectorXd non_basis_cost_vec;
+    Eigen::VectorXd bound_vec;
+  };
+  RevisedSimplexMatrixForm ToRevisedSimplexMatrixForm();
 
   int base_variable_count_ = 0;
   int substitution_variable_count_ = 0;

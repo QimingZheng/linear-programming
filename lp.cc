@@ -309,3 +309,63 @@ LPModel::MatrixForm LPModel::ToMatrixForm() {
       b,
   };
 }
+
+LPModel::RevisedSimplexMatrixForm LPModel::ToRevisedSimplexMatrixForm() {
+  if (model_.opt_obj.opt_type != OptimizationObject::MIN) {
+    model_.opt_obj.SetOptType(OptimizationObject::MIN);
+    model_.opt_obj.expression *= -1;
+    opt_reverted_ = !opt_reverted_;
+  }
+  int non_basis_variable_num = non_base_variables_.size();
+  int basis_variable_num = base_variables_.size();
+  int constraint_num = model_.constraints.size();
+  Eigen::MatrixXd basis_coefficient_mat(constraint_num, basis_variable_num);
+  Eigen::MatrixXd non_basis_coefficient_mat(constraint_num,
+                                            non_basis_variable_num);
+  Eigen::VectorXd basis_cost_vec(basis_variable_num);
+  Eigen::VectorXd non_basis_cost_vec(non_basis_variable_num);
+  Eigen::VectorXd bound_vec(constraint_num);
+  int col = 0;
+  for (auto var : non_base_variables_) {
+    int row = 0;
+    for (auto con : model_.constraints) {
+      non_basis_coefficient_mat(row, col) =
+          con.expression.GetCoeffOf(var).float_value;
+      row += 1;
+    }
+    col += 1;
+  }
+  col = 0;
+  for (auto var : base_variables_) {
+    int row = 0;
+    for (auto con : model_.constraints) {
+      basis_coefficient_mat(row, col) =
+          con.expression.GetCoeffOf(var).float_value;
+      row += 1;
+    }
+    col += 1;
+  }
+  col = 0;
+  for (auto var : non_base_variables_) {
+    non_basis_cost_vec(col) =
+        model_.opt_obj.expression.GetCoeffOf(var).float_value;
+    col += 1;
+  }
+  col = 0;
+  for (auto var : base_variables_) {
+    basis_cost_vec(col) = model_.opt_obj.expression.GetCoeffOf(var).float_value;
+    col += 1;
+  }
+  col = 0;
+  for (auto con : model_.constraints) {
+    bound_vec(col) = -con.expression.constant.float_value;
+    col += 1;
+  }
+  return {
+      basis_coefficient_mat,
+      non_basis_coefficient_mat,
+      basis_cost_vec,
+      non_basis_cost_vec,
+      bound_vec,
+  };
+}
