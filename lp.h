@@ -15,6 +15,7 @@
 #include <unsupported/Eigen/MatrixFunctions>
 
 #include "base.h"
+#include "tableau/tableau.h"
 
 const std::string kBase = "base";
 const std::string kSubstitution = "subst";
