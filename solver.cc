@@ -8,6 +8,7 @@
 enum SolverAlgorithm {
   SOLVER_UNKNOWN,
   SIMPLEX,
+  SIMPLEX_TABLEAU,
   DUAL_SIMPLEX,
   COLUMN_GENERATION,
 };
@@ -23,6 +24,9 @@ std::string ToLower(std::string str) {
 SolverAlgorithm ParseAlgorithm(std::string algo) {
   if (ToLower(algo) == "simplex") {
     return SIMPLEX;
+  }
+  if (ToLower(algo) == "simplex_tableau") {
+    return SIMPLEX_TABLEAU;
   }
   if (ToLower(algo) == "dual_simplex") {
     return DUAL_SIMPLEX;
@@ -85,6 +89,17 @@ int main(int argc, char **argv) {
         if (result == Result::SOLVED) {
           optimum = lp_model.GetSimplexOptimum();
           solution = lp_model.GetSimplexSolution();
+        }
+      } break;
+
+      case SIMPLEX_TABLEAU: {
+        lp_model.ToStandardForm();
+        lp_model.ToSlackForm();
+        lp_model.ToTableau();
+        result = lp_model.TableauSimplexSolve();
+        if (result == Result::SOLVED) {
+          optimum = lp_model.GetTableauSimplexOptimum();
+          solution = lp_model.GetTableauSimplexSolution();
         }
       } break;
 

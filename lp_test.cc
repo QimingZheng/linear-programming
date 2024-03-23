@@ -131,6 +131,22 @@ TEST(LPModel, Solve) {
   EXPECT_EQ(model.GetSimplexSolution(), sol);
 }
 
+TEST(LPModel, TableauSimplexSolve) {
+  Parser parser;
+  std::ifstream file("tests/test3.txt");
+  LPModel model = parser.Parse(file);
+  Variable x1("x1"), x2("x2");
+  model.ToStandardForm();
+  model.ToSlackForm();
+  model.ToTableau();
+
+  EXPECT_EQ(model.TableauSimplexSolve(), Result::SOLVED);
+
+  EXPECT_EQ(model.GetTableauSimplexOptimum(), -7.0f);
+  auto sol = std::map<Variable, Num>({{x1, 5.0f}, {x2, 2.0f}});
+  EXPECT_EQ(model.GetTableauSimplexSolution(), sol);
+}
+
 TEST(LPModel, ExtremeRay) {
   Parser parser;
   std::ifstream file("tests/test20.txt");

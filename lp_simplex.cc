@@ -270,6 +270,97 @@ Result LPModel::SimplexSolve() {
   return ERROR;
 }
 
+Result LPModel::TableauSimplexSolve() {
+  // TODO: run phase 1 initialization before solving the LP model.
+  assert(needInitialization(model_.constraints) == false);
+
+  while (true) {
+    Variable e;
+    // Find any non-base variable x_{e} that c_e > 0.
+    for (auto iter = opt_obj_tableau_->Begin(); !iter->IsEnd();
+         iter = iter->Next()) {
+      if (Num(iter->Data()).IsPositive() and
+          !IsBaseVariable(index_to_variable_[iter->Index()])) {
+        e = index_to_variable_[iter->Index()];
+        break;
+      }
+    }
+    // If not found, which means \vec c <= \vec 0, so the maximum of the
+    // objective function is already achieved.
+    if (e.IsUndefined()) {
+      simplex_solution_ = GetTableauSimplexSolution();
+      simplex_optimum_ = GetTableauSimplexOptimum();
+      return SOLVED;
+    }
+    // Find a base variable x_{d} s.t. A_{d,e} > 0 and minimize b_{d}/A_{d,e}
+    Variable d;
+    Num min_ = kFloatMax;
+    tableau_index_t e_col_indx = variable_to_index_[e];
+    for (auto iter = tableau_->Col(e_col_indx)->Begin(); !iter->IsEnd();
+         iter = iter->Next()) {
+      if (Num(iter->Data()).IsZero()) continue;
+      if (!Num(iter->Data()).IsNegative()) continue;
+      tableau_index_t row_ind = iter->Index();
+      auto row = tableau_->Row(row_ind);
+      for (auto row_iter = row->Begin(); !row_iter->IsEnd();
+           row_iter = row_iter->Next()) {
+        if (IsBaseVariable(index_to_variable_[row_iter->Index()]) and
+            !Num(row_iter->Data()).IsZero()) {
+          if (min_ > row->At(variable_to_index_.size()) / (-iter->Data())) {
+            min_ = row->At(variable_to_index_.size()) / (-iter->Data());
+            d = index_to_variable_[row_iter->Index()];
+          }
+        }
+      }
+    }
+    // If x_{d} is not found, which means the optimum is unbounded (by assigning
+    // x_{e} as +infinity, and all other non-base as 0).
+    if (d.IsUndefined()) {
+      // TODO
+      return UNBOUNDED;
+    }
+    // Perform pivot(x_{d}, x_{e})
+    TableauPivot(d, e);
+  }
+  return ERROR;
+}
+
+std::map<Variable, Num> LPModel::GetTableauSimplexSolution() {
+  std::map<Variable, Num> all_sol;
+  std::map<Variable, Num> sol;
+  for (auto var : non_base_variables_) {
+    all_sol[var] = 0.0f;
+    if (IsUserDefined(var) or IsOverriddenAsUserDefined(var)) sol[var] = 0.0f;
+  }
+  for (auto base : base_variables_) {
+    int row_id = 0;
+    for (auto constraint : model_.constraints) {
+      if (tableau_->Row(row_id)->At(variable_to_index_[base]) != 0.0) {
+        all_sol[base] = -tableau_->Row(row_id)->At(variable_to_index_.size()) /
+                        tableau_->Row(row_id)->At(variable_to_index_[base]);
+        if (IsUserDefined(base) or IsOverriddenAsUserDefined(base))
+          sol[base] = all_sol[base];
+      }
+      row_id++;
+    }
+  }
+  for (auto entry : raw_variable_expression_) {
+    auto raw_var = entry.first;
+    auto exp = entry.second;
+    while (exp.variable_coeff.size() > 0) {
+      auto entry = *exp.variable_coeff.begin();
+      ReplaceVariableWithExpression(exp, entry.first, all_sol[entry.first]);
+    }
+    sol[raw_var] = exp.constant;
+  }
+  return sol;
+}
+
+Num LPModel::GetTableauSimplexOptimum() {
+  return (opt_reverted_ ? -1 : 1) *
+         opt_obj_tableau_->At(variable_to_index_.size());
+}
+
 Num LPModel::GetSimplexOptimum() { return simplex_optimum_; }
 
 std::map<Variable, Num> LPModel::GetSimplexSolution() {

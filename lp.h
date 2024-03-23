@@ -83,9 +83,14 @@ class LPModel {
   // The phase 2 (main step) of the simplex method.
   Result SimplexSolve();
 
+  // THe phase 2 (main step) of the simplex method using Tableau storage.
+  Result TableauSimplexSolve();
+
   Num GetSimplexOptimum();
+  Num GetTableauSimplexOptimum();
 
   std::map<Variable, Num> GetSimplexSolution();
+  std::map<Variable, Num> GetTableauSimplexSolution();
 
   // The extreme ray is an unbounded direction.
   std::map<Variable, Num> GetSimplexExtremeRay();
