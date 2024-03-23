@@ -434,3 +434,28 @@ TEST(LPModel, ToTableau) {
       "-1.000000 * base2 + 17.500000 * x1 + 7.700000 * x2 + 30.000000 * x4 + "
       "-30.000000\n");
 }
+
+TEST(LPModel, TableauPivot) {
+  Parser parser;
+  std::ifstream file("tests/test3.txt");
+  LPModel model = parser.Parse(file);
+  model.ToStandardForm();
+  model.ToSlackForm();
+  model.ToTableau();
+
+  model.TableauPivot(Variable("base0"), Variable("x1"));
+  EXPECT_EQ(model.PrintTableau(),
+            "-0.500000 * base0 + 0.000000 * x1 + 0.500000 * x2 + 6.000000\n"
+            "-0.500000 * base0 + -1.000000 * x1 + -0.500000 * x2 + 6.000000\n"
+            "0.500000 * base0 + -1.000000 * base1 + 0.000000 * x1 + -1.500000 "
+            "* x2 + 3.000000\n");
+
+  model.TableauPivot(Variable("base1"), Variable("x2"));
+  EXPECT_EQ(model.PrintTableau(),
+            "-0.333333 * base0 + -0.333333 * base1 + 0.000000 * x1 + 0.000000 "
+            "* x2 + 7.000000\n"
+            "-0.666667 * base0 + 0.333333 * base1 + -1.000000 * x1 + 0.000000 "
+            "* x2 + 5.000000\n"
+            "0.333333 * base0 + -0.666667 * base1 + 0.000000 * x1 + -1.000000 "
+            "* x2 + 2.000000\n");
+}

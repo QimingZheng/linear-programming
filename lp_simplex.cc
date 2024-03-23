@@ -40,6 +40,53 @@ void LPModel::Pivot(Variable base, Variable non_base) {
   }
 }
 
+void LPModel::TableauPivot(Variable base, Variable non_base) {
+  assert(tableau_ != nullptr);
+  assert(opt_obj_tableau_ != nullptr);
+  assert(non_base_variables_.find(non_base) != non_base_variables_.end());
+  assert(base_variables_.find(base) != base_variables_.end());
+  base_variables_.erase(base);
+  base_variables_.insert(non_base);
+  non_base_variables_.erase(non_base);
+  non_base_variables_.insert(base);
+
+  tableau_index_t base_column_index = variable_to_index_[base],
+                  non_base_column_index = variable_to_index_[non_base];
+
+  // Find a row that contains both base and non_base.
+  List<real_t>* base_column =
+      new List<real_t>(tableau_->Col(base_column_index));
+  List<real_t>* non_base_column = tableau_->Col(non_base_column_index);
+  base_column->Mul(non_base_column);
+  auto iter = base_column->Begin();
+  assert(iter->IsEnd() == false);
+  auto candidate_row_ind = iter->Index();
+  assert(candidate_row_ind >= 0);
+  tableau_index_t candidate_col_ind = non_base_column_index;
+
+  auto substitution = new List<real_t>(tableau_->Row(candidate_row_ind));
+  substitution->Scale(opt_obj_tableau_->At(candidate_col_ind) *
+                      (-1.0 / substitution->At(candidate_col_ind)));
+  opt_obj_tableau_->Add(substitution);
+  opt_obj_tableau_->Set(candidate_col_ind, 0);
+
+  auto candidate_row = new List<real_t>(tableau_->Row(candidate_row_ind));
+  candidate_row->Scale(-1.0 / candidate_row->At(candidate_col_ind));
+  auto candidate_col = new List<real_t>(tableau_->Col(candidate_col_ind));
+  candidate_col->Set(
+      candidate_row_ind,
+      1.0f + tableau_->Row(candidate_row_ind)->At(candidate_col_ind));
+  auto helper_tableau_ = candidate_col->Cross(
+      candidate_row, model_.constraints.size(), variable_to_index_.size() + 1);
+  tableau_->Add(helper_tableau_);
+
+  delete helper_tableau_;
+  delete base_column;
+  delete substitution;
+  delete candidate_col;
+  delete candidate_row;
+}
+
 bool needInitialization(const std::vector<Constraint>& constraints) {
   bool needed = false;
   for (auto constraint : constraints) {

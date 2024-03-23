@@ -74,6 +74,8 @@ class LPModel {
   /* The Simplex Method. See: https://en.wikipedia.org/wiki/Simplex_algorithm */
   // The key operation of the simplex method.
   void Pivot(Variable base, Variable non_base);
+  // The version of Pivot operation using tableau.
+  void TableauPivot(Variable base, Variable non_base);
 
   // The phase 1 of the simplex method: initialization.
   Result Initialize();
