@@ -144,6 +144,68 @@ void LPModel::ToSlackForm() {
   }
 }
 
+void LPModel::ToTableau() {
+  if (tableau_ != nullptr) return;
+  variable_to_index_.clear();
+  for (auto var : base_variables_) variable_to_index_[var] = -1;
+  for (auto var : non_base_variables_) variable_to_index_[var] = -1;
+  tableau_index_t next_id = 0;
+  for (auto& entry : variable_to_index_) {
+    index_to_variable_[next_id] = entry.first;
+    entry.second = next_id++;
+  }
+
+  tableau_ = new Tableau<real_t>(model_.constraints.size(),
+                                 variable_to_index_.size() + 1);
+  tableau_index_t row = 0, col = 0;
+  for (auto con : model_.constraints) {
+    List<real_t>* tableau_row = new List<real_t>();
+    for (auto entry : variable_to_index_) {
+      if (!con.expression.GetCoeffOf(entry.first).IsZero()) {
+        tableau_row->Append(entry.second,
+                            con.expression.GetCoeffOf(entry.first).float_value);
+      }
+    }
+    tableau_row->Append(next_id, con.expression.constant.float_value);
+    tableau_->AppendRow(row, tableau_row);
+    row++;
+  }
+
+  opt_obj_tableau_ = new List<real_t>();
+  for (auto entry : variable_to_index_) {
+    if (!model_.opt_obj.expression.GetCoeffOf(entry.first).IsZero()) {
+      opt_obj_tableau_->Append(
+          entry.second,
+          model_.opt_obj.expression.GetCoeffOf(entry.first).float_value);
+    }
+  }
+  if (!model_.opt_obj.expression.constant.IsZero()) {
+    opt_obj_tableau_->Append(next_id,
+                             model_.opt_obj.expression.constant.float_value);
+  }
+}
+
+std::string LPModel::PrintTableau() {
+  std::string ret = "";
+  auto printList = [&](List<real_t>* list) -> std::string {
+    std::string ret = "";
+    int id = 0;
+    for (auto iter = list->Begin(); !iter->IsEnd(); iter = iter->Next()) {
+      if (id > 0) ret += " + ";
+      ret += std::to_string(iter->Data());
+      if (iter->Index() != index_to_variable_.size())
+        ret += " * " + index_to_variable_[iter->Index()].ToString();
+      id += 1;
+    }
+    return ret;
+  };
+  ret += printList(opt_obj_tableau_) + "\n";
+  for (auto i = 0; i < model_.constraints.size(); i++) {
+    ret += printList(tableau_->Row(i)) + "\n";
+  }
+  return ret;
+}
+
 Num LPModel::GetOptimum(bool check_optimal_condition) {
   if (check_optimal_condition) {
     for (auto& entry : model_.opt_obj.expression.variable_coeff) {

@@ -414,3 +414,23 @@ TEST(LPModel, ColumnGenerationSolveWithTwoPhase) {
     EXPECT_GE(entry.second - actual_sol[entry.first], -1e-3f);
   }
 }
+
+TEST(LPModel, ToTableau) {
+  Parser parser;
+  std::ifstream file("tests/test9.txt");
+  LPModel model = parser.Parse(file);
+  Variable x1("x1"), x2("x2"), x3("x3"), x4("x4");
+  model.ToStandardForm();
+  model.ToSlackForm();
+
+  model.ToTableau();
+  EXPECT_EQ(
+      model.PrintTableau(),
+      "-0.800000 * x1 + -0.500000 * x2 + -0.900000 * x3 + -1.500000 * x4\n"
+      "-1.000000 * base0 + 1000.000000 * x1 + 1500.000000 * x2 + 1750.000000 * "
+      "x3 + 3250.000000 * x4 + -4000.000000\n"
+      "-1.000000 * base1 + 0.600000 * x1 + 0.270000 * x2 + 0.680000 * x3 + "
+      "0.300000 * x4 + -1.000000\n"
+      "-1.000000 * base2 + 17.500000 * x1 + 7.700000 * x2 + 30.000000 * x4 + "
+      "-30.000000\n");
+}

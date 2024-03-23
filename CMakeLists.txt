@@ -10,6 +10,8 @@ find_package (Eigen3 REQUIRED NO_MODULE)
 set (CMAKE_CXX_STANDARD 17)
 string(REPLACE "-DNDEBUG" "" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
 
+find_package(OpenMP)
+
 include(FetchContent)
 FetchContent_Declare(
   googletest
@@ -35,6 +37,9 @@ list(FILTER TEST_SRCS EXCLUDE REGEX "lp_primal_dual_path_following_test\.cc")
 include_directories(headers ${HEADERS})
 add_library(lp_library SHARED ${SRCS})
 target_link_libraries(lp_library Eigen3::Eigen)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(lp_library OpenMP::OpenMP_CXX)
+endif()
 
 add_executable(solver solver.cc)
 target_include_directories(solver PRIVATE headers)

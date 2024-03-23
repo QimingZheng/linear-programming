@@ -66,6 +66,11 @@ class LPModel {
   // Transform the LP model to the slack form.
   void ToSlackForm();
 
+  // Change the underlying storage's data structure to Tableau.
+  void ToTableau();
+
+  std::string PrintTableau();
+
   /* The Simplex Method. See: https://en.wikipedia.org/wiki/Simplex_algorithm */
   // The key operation of the simplex method.
   void Pivot(Variable base, Variable non_base);
@@ -236,6 +241,11 @@ class LPModel {
   // standard form transformation.
   std::set<Variable> non_negative_variables_;
   std::map<Variable, Expression> raw_variable_expression_;
+
+  Tableau<real_t>* tableau_ = nullptr;
+  List<real_t>* opt_obj_tableau_ = nullptr;
+  std::map<Variable, tableau_index_t> variable_to_index_;
+  std::map<tableau_index_t, Variable> index_to_variable_;
 
   // Variables that are overrided as user defined vars (usually used in method
   // ToDualForm).
