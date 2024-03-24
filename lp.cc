@@ -192,6 +192,7 @@ std::string LPModel::PrintTableau() {
     std::string ret = "";
     int id = 0;
     for (auto iter = list->Begin(); !iter->IsEnd(); iter = iter->Next()) {
+      if (iter->Data() == 0.0) continue;
       if (id > 0) ret += " + ";
       ret += std::to_string(iter->Data());
       if (iter->Index() != constant_index_)
