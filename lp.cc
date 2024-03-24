@@ -154,6 +154,7 @@ void LPModel::ToTableau() {
     index_to_variable_[next_id] = entry.first;
     entry.second = next_id++;
   }
+  constant_index_ = next_id;
 
   tableau_ = new Tableau<real_t>(model_.constraints.size(),
                                  variable_to_index_.size() + 1);
@@ -166,7 +167,7 @@ void LPModel::ToTableau() {
                             con.expression.GetCoeffOf(entry.first).float_value);
       }
     }
-    tableau_row->Append(next_id, con.expression.constant.float_value);
+    tableau_row->Append(constant_index_, con.expression.constant.float_value);
     tableau_->AppendRow(row, tableau_row);
     row++;
   }
@@ -180,7 +181,7 @@ void LPModel::ToTableau() {
     }
   }
   if (!model_.opt_obj.expression.constant.IsZero()) {
-    opt_obj_tableau_->Append(next_id,
+    opt_obj_tableau_->Append(constant_index_,
                              model_.opt_obj.expression.constant.float_value);
   }
 }
@@ -193,7 +194,7 @@ std::string LPModel::PrintTableau() {
     for (auto iter = list->Begin(); !iter->IsEnd(); iter = iter->Next()) {
       if (id > 0) ret += " + ";
       ret += std::to_string(iter->Data());
-      if (iter->Index() != index_to_variable_.size())
+      if (iter->Index() != constant_index_)
         ret += " * " + index_to_variable_[iter->Index()].ToString();
       id += 1;
     }

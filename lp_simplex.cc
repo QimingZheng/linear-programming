@@ -58,9 +58,14 @@ void LPModel::TableauPivot(Variable base, Variable non_base) {
       new List<real_t>(tableau_->Col(base_column_index));
   List<real_t>* non_base_column = tableau_->Col(non_base_column_index);
   base_column->Mul(non_base_column);
-  auto iter = base_column->Begin();
-  assert(iter->IsEnd() == false);
-  auto candidate_row_ind = iter->Index();
+  tableau_index_t candidate_row_ind = -1;
+  for (auto iter = base_column->Begin(); iter->IsEnd() == false;
+       iter = iter->Next()) {
+    if (iter->Index() != constant_index_ and !Num(iter->Data()).IsZero()) {
+      candidate_row_ind = iter->Index();
+      break;
+    }
+  }
   assert(candidate_row_ind >= 0);
   tableau_index_t candidate_col_ind = non_base_column_index;
 
@@ -96,6 +101,16 @@ bool needInitialization(const std::vector<Constraint>& constraints) {
     }
   }
   return needed;
+}
+
+bool needTableauInitialization(Tableau<real_t>* tableau,
+                               tableau_index_t constant_column_index) {
+  for (auto row = 0; row < tableau->Rows(); row++) {
+    if (Num(tableau->Row(row)->At(constant_column_index)).IsNegative()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 /* Phase 1: If there are negative constants in some constraint, use Pivot method
@@ -196,6 +211,91 @@ Result LPModel::Initialize() {
     ReplaceVariableWithExpression(model_.opt_obj.expression, base,
                                   substitution);
   }
+
+  return SOLVED;
+}
+
+Result LPModel::TableauSimplexInitialize() {
+  if (!needTableauInitialization(tableau_, constant_index_)) return SOLVED;
+
+  Variable artificial_var = CreateArtificialVariable();
+  non_base_variables_.insert(artificial_var);
+
+  tableau_index_t artificial_var_index = variable_to_index_.size() + 1;
+  variable_to_index_[artificial_var] = artificial_var_index;
+  index_to_variable_[artificial_var_index] = artificial_var;
+
+  auto original_opt_obj_tableau = opt_obj_tableau_;
+  opt_obj_tableau_ = new List<real_t>();
+
+  opt_obj_tableau_->Append(artificial_var_index, -1.0);
+  auto original_opt_reverted = opt_reverted_;
+  opt_reverted_ = false;
+  auto extra_col = new List<real_t>();
+  for (int i = 0; i < tableau_->Rows(); i++) {
+    extra_col->Append(i, 1.0);
+  }
+  tableau_->AppendExtraCol(extra_col);
+
+  List<real_t>::ReduceStruct min_bounding_constant = {-1, 0.0f};
+  min_bounding_constant =
+      tableau_->Col(constant_index_)
+          ->Reduce(List<real_t>::MinReduce, min_bounding_constant);
+
+  assert(min_bounding_constant.first >= 0);
+  auto min_bounding_constant_constaint_index = min_bounding_constant.first;
+  for (auto iter =
+           tableau_->Row(min_bounding_constant_constaint_index)->Begin();
+       !iter->IsEnd(); iter = iter->Next()) {
+    if (iter->Index() == constant_index_) continue;
+    if (Num(iter->Data()).IsZero()) continue;
+    if (IsBaseVariable(index_to_variable_[iter->Index()])) {
+      TableauPivot(index_to_variable_[iter->Index()], artificial_var);
+      break;
+    }
+  }
+  // Now, all constraints' constant b is non-negative.
+  for (auto iter = tableau_->Col(constant_index_)->Begin(); !iter->IsEnd();
+       iter = iter->Next())
+    assert(Num(iter->Data()).IsNonNegative());
+
+  assert(TableauSimplexSolve() == SOLVED);
+
+  if (GetTableauSimplexOptimum().IsNegative()) {
+    return NOSOLUTION;
+  }
+
+  if (base_variables_.find(artificial_var) != base_variables_.end()) {
+    auto any_non_base_var = non_base_variables_.begin();
+    TableauPivot(artificial_var, *any_non_base_var);
+  }
+
+  non_base_variables_.erase(artificial_var);
+  variable_to_index_.erase(artificial_var);
+  index_to_variable_.erase(artificial_var_index);
+  assert(non_base_variables_.find(artificial_var) == non_base_variables_.end());
+
+  tableau_->RemoveExtraCol();
+  // Replace base variables in the objective function with non-base variable.
+  opt_obj_tableau_ = original_opt_obj_tableau;
+  for (auto base : base_variables_) {
+    auto base_index = variable_to_index_[base];
+    if (!Num(opt_obj_tableau_->At(base_index)).IsZero()) {
+      for (auto iter = tableau_->Col(base_index)->Begin(); !iter->IsEnd();
+           iter = iter->Next()) {
+        if (!Num(iter->Data()).IsZero()) {
+          auto row = new List<real_t>(tableau_->Row(iter->Index()));
+          row->Scale(-1.0 / iter->Data());
+          row->Set(base_index, 0.0f);
+          row->Scale(opt_obj_tableau_->At(base_index));
+          opt_obj_tableau_->Add(row);
+          break;
+        }
+      }
+    }
+  }
+  opt_reverted_ = original_opt_reverted;
+
   return SOLVED;
 }
 
@@ -272,15 +372,21 @@ Result LPModel::SimplexSolve() {
 
 Result LPModel::TableauSimplexSolve() {
   // TODO: run phase 1 initialization before solving the LP model.
-  assert(needInitialization(model_.constraints) == false);
+  if (needTableauInitialization(tableau_, constant_index_)) {
+    auto result = TableauSimplexInitialize();
+    if (result == NOSOLUTION) return NOSOLUTION;
+    assert(result == SOLVED);
+  }
 
   while (true) {
     Variable e;
     // Find any non-base variable x_{e} that c_e > 0.
     for (auto iter = opt_obj_tableau_->Begin(); !iter->IsEnd();
          iter = iter->Next()) {
-      if (Num(iter->Data()).IsPositive() and
-          !IsBaseVariable(index_to_variable_[iter->Index()])) {
+      if (iter->Index() != constant_index_ and
+          Num(iter->Data()).IsPositive() and
+          non_base_variables_.find(index_to_variable_[iter->Index()]) !=
+              non_base_variables_.end()) {
         e = index_to_variable_[iter->Index()];
         break;
       }
@@ -304,10 +410,11 @@ Result LPModel::TableauSimplexSolve() {
       auto row = tableau_->Row(row_ind);
       for (auto row_iter = row->Begin(); !row_iter->IsEnd();
            row_iter = row_iter->Next()) {
-        if (IsBaseVariable(index_to_variable_[row_iter->Index()]) and
+        if (row_iter->Index() != constant_index_ and
+            IsBaseVariable(index_to_variable_[row_iter->Index()]) and
             !Num(row_iter->Data()).IsZero()) {
-          if (min_ > row->At(variable_to_index_.size()) / (-iter->Data())) {
-            min_ = row->At(variable_to_index_.size()) / (-iter->Data());
+          if (min_ > row->At(constant_index_) / (-iter->Data())) {
+            min_ = row->At(constant_index_) / (-iter->Data());
             d = index_to_variable_[row_iter->Index()];
           }
         }
@@ -335,8 +442,8 @@ std::map<Variable, Num> LPModel::GetTableauSimplexSolution() {
   for (auto base : base_variables_) {
     int row_id = 0;
     for (auto constraint : model_.constraints) {
-      if (tableau_->Row(row_id)->At(variable_to_index_[base]) != 0.0) {
-        all_sol[base] = -tableau_->Row(row_id)->At(variable_to_index_.size()) /
+      if (!Num(tableau_->Row(row_id)->At(variable_to_index_[base])).IsZero()) {
+        all_sol[base] = -tableau_->Row(row_id)->At(constant_index_) /
                         tableau_->Row(row_id)->At(variable_to_index_[base]);
         if (IsUserDefined(base) or IsOverriddenAsUserDefined(base))
           sol[base] = all_sol[base];
@@ -357,8 +464,7 @@ std::map<Variable, Num> LPModel::GetTableauSimplexSolution() {
 }
 
 Num LPModel::GetTableauSimplexOptimum() {
-  return (opt_reverted_ ? -1 : 1) *
-         opt_obj_tableau_->At(variable_to_index_.size());
+  return (opt_reverted_ ? -1 : 1) * opt_obj_tableau_->At(constant_index_);
 }
 
 Num LPModel::GetSimplexOptimum() { return simplex_optimum_; }

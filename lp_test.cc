@@ -228,6 +228,47 @@ TEST(LPModel, Initialization) {
   }
 }
 
+TEST(LPModel, TableauInitialization) {
+  // Test the two phase algorithm.
+  /*
+   * min 6 * x1 + 3 * x2
+   * s.t.
+   *    x1 + x2 >= 1
+   *    2 * x1 - x2 >= 1
+   *    3 * x2 <= 2
+   */
+  Parser parser;
+  std::ifstream file("tests/test4.txt");
+  LPModel model = parser.Parse(file);
+  Variable x1("x1"), x2("x2");
+
+  model.ToStandardForm();
+  model.ToSlackForm();
+  model.ToTableau();
+
+  EXPECT_EQ(model.TableauSimplexInitialize(), Result::SOLVED);
+  EXPECT_EQ(model.PrintTableau(),
+            "-6.000000 * base0 + -0.000000 * base1 + -6.000000 * x1 + 3.000000 "
+            "* x2 + -6.000000\n"
+            "1.000000 * base0 + 0.000000 * base1 + -1.000000 * x1 + -1.000000 "
+            "* x2 + 1.000000\n"
+            "2.000000 * base0 + -1.000000 * base1 + 0.000000 * x1 + -3.000000 "
+            "* x2 + 1.000000\n"
+            "0.000000 * base0 + 0.000000 * base1 + -1.000000 * base2 + "
+            "0.000000 * x1 + -3.000000 * x2 + 2.000000\n");
+
+  EXPECT_EQ(model.TableauSimplexSolve(), Result::SOLVED);
+  EXPECT_EQ(model.GetTableauSimplexOptimum(), 5.0f);
+  auto expected_sol = std::map<Variable, Num>({{x1, 2.0f / 3}, {x2, 1.0f / 3}});
+  auto actual_sol = model.GetTableauSimplexSolution();
+  EXPECT_EQ(expected_sol.size(), actual_sol.size());
+  for (auto entry : expected_sol) {
+    EXPECT_EQ(actual_sol.find(entry.first) != actual_sol.end(), true);
+    EXPECT_LE(entry.second - actual_sol[entry.first], 1e-6f);
+    EXPECT_GE(entry.second - actual_sol[entry.first], -1e-6f);
+  }
+}
+
 TEST(LPModel, GetSolution) {
   Parser parser;
   std::ifstream file("tests/test5.txt");

@@ -80,6 +80,9 @@ class LPModel {
   // The phase 1 of the simplex method: initialization.
   Result Initialize();
 
+  // The phase 1 of the simplex method for Tableau storage.
+  Result TableauSimplexInitialize();
+
   // The phase 2 (main step) of the simplex method.
   Result SimplexSolve();
 
@@ -253,6 +256,8 @@ class LPModel {
   List<real_t>* opt_obj_tableau_ = nullptr;
   std::map<Variable, tableau_index_t> variable_to_index_;
   std::map<tableau_index_t, Variable> index_to_variable_;
+  // The column index of bounding constants.
+  tableau_index_t constant_index_;
 
   // Variables that are overrided as user defined vars (usually used in method
   // ToDualForm).
