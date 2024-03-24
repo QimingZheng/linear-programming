@@ -34,7 +34,7 @@ list(FILTER SRCS EXCLUDE REGEX "lp_dantzig_wolfe_decomposition\.cc")
 # TODO: fix the bug of primal-dual path following solver.
 list(FILTER TEST_SRCS EXCLUDE REGEX "lp_primal_dual_path_following_test\.cc")
 
-include_directories(headers ${HEADERS})
+include_directories(headers ${CMAKE_CURRENT_SOURCE_DIR})
 add_library(lp_library SHARED ${SRCS})
 target_link_libraries(lp_library Eigen3::Eigen)
 if(OpenMP_CXX_FOUND)
