@@ -81,8 +81,7 @@ void LPModel::TableauPivot(Variable base, Variable non_base) {
   candidate_col->Set(
       candidate_row_ind,
       1.0f + tableau_->Row(candidate_row_ind)->At(candidate_col_ind));
-  auto helper_tableau_ = candidate_col->Cross(
-      candidate_row, model_.constraints.size(), variable_to_index_.size() + 1);
+  auto helper_tableau_ = candidate_col->SparseCross(candidate_row);
   tableau_->Add(helper_tableau_);
 
   delete helper_tableau_;
