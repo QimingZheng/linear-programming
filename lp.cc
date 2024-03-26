@@ -149,8 +149,18 @@ void LPModel::ToTableau() {
   variable_to_index_.clear();
   for (auto var : base_variables_) variable_to_index_[var] = -1;
   for (auto var : non_base_variables_) variable_to_index_[var] = -1;
+
+  // Two extra booleans, one for the constant (never used, just for the
+  // simplicity of indexing), the other for the potential artificial variable
+  // (in phase 1).
+  tableau_is_base_variable_ = new bool[variable_to_index_.size() + 2];
+
   tableau_index_t next_id = 0;
   for (auto& entry : variable_to_index_) {
+    if (base_variables_.find(entry.first) != base_variables_.end())
+      tableau_is_base_variable_[next_id] = true;
+    else
+      tableau_is_base_variable_[next_id] = false;
     index_to_variable_[next_id] = entry.first;
     entry.second = next_id++;
   }

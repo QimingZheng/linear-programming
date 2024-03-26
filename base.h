@@ -60,6 +60,11 @@ bool operator<(const Variable &lhs, const Variable &rhs);
 
 const float kEpsilonF = 1e-6f;
 
+inline bool _IsNegative(float value) { return value <= -kEpsilonF; }
+inline bool _IsPositive(float value) { return value >= kEpsilonF; }
+inline bool _IsZero(float value) { return abs(value) < kEpsilonF; }
+inline bool _IsNonNegative(float value) { return value > -kEpsilonF; }
+
 struct Num {
  public:
   Num() : type(DataType::UNKNOWN) {}
@@ -69,7 +74,7 @@ struct Num {
   bool IsZero() const {
     switch (type) {
       case FLOAT:
-        return abs(float_value) < kEpsilonF;
+        return _IsZero(float_value);
       case INTEGER:
         return int_value == 0;
       default:
@@ -91,7 +96,7 @@ struct Num {
   bool IsNegative() const {
     switch (type) {
       case FLOAT:
-        return float_value < -kEpsilonF;
+        return _IsNegative(float_value);
       case INTEGER:
         return int_value < 0;
       default:
@@ -102,7 +107,7 @@ struct Num {
   bool IsNonNegative() const {
     switch (type) {
       case FLOAT:
-        return float_value >= -kEpsilonF;
+        return _IsNonNegative(float_value);
       case INTEGER:
         return int_value >= 0;
       default:
@@ -113,7 +118,7 @@ struct Num {
   bool IsPositive() const {
     switch (type) {
       case FLOAT:
-        return float_value >= kEpsilonF;
+        return _IsPositive(float_value);
       case INTEGER:
         return int_value >= 0;
       default:
