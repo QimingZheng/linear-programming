@@ -49,7 +49,10 @@ if __name__ == "__main__":
         print(str(len(instance.constraints)) + " constraints")
         InitializeUnifiedVarNames(variables)
         with open(output, "w") as out:
-            out.write("max ")
+            if instance.sense == pulp.LpMinimize:
+                out.write("min ")
+            else:
+                out.write("max ")
             out.write(
                 parseExpression(
                     instance.objective.toDict(), instance.objective.constant
