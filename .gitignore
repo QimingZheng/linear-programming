@@ -2,3 +2,6 @@
 build/
 Testing/
 eigen*/
+*.mps
+tools/*
+!tools/mps_load.py
