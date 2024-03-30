@@ -5,3 +5,7 @@ eigen*/
 *.mps
 tools/*
 !tools/mps_load.py
+!tools/emps.c
+!tools/preprocessing.sh
+datasets/*/*.mps
+datasets/*/*.txt

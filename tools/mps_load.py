@@ -10,6 +10,8 @@ def InitializeUnifiedVarNames(variables):
         unified_var_names[var] = "x" + str(total)
         total += 1
 
+def float_to_str(x):
+    return format(x, 'f')
 
 def parseExpression(affine_expr_coeffs, constant):
     ret = ""
@@ -17,11 +19,11 @@ def parseExpression(affine_expr_coeffs, constant):
     for item in affine_expr_coeffs:
         var, coeff = item["name"], item["value"]
         if coeff < 0:
-            ret += str(coeff) + "*" + unified_var_names[var]
+            ret += float_to_str(coeff) + "*" + unified_var_names[var]
         else:
-            ret += ("+" if ind > 0 else "") + str(coeff) + "*" + unified_var_names[var]
+            ret += ("+" if ind > 0 else "") + float_to_str(coeff) + "*" + unified_var_names[var]
         ind += 1
-    ret += ("+" if ind > 0 else "") + str(constant)
+    ret += ("+" if ind > 0 else "") + float_to_str(constant)
     return ret
 
 
@@ -34,7 +36,7 @@ def parseConstraint(con):
         ret += ">="
     else:
         ret += "<="
-    ret += str(con["constant"])
+    ret += float_to_str(con["constant"])
     return ret
 
 
