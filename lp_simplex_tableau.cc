@@ -118,8 +118,21 @@ Result LPModel::TableauSimplexInitialize() {
   }
 
   if (tableau_is_base_variable_[artificial_var_index]) {
-    auto any_non_base_var = non_base_variables_.begin();
-    TableauPivot(artificial_var, *any_non_base_var);
+    bool pivoted = false;
+    for (auto iter = tableau_->Col(artificial_var_index)->Begin();
+         !iter->IsEnd(); iter = iter->Next()) {
+      if (pivoted) break;
+      if (_IsZero(iter->Data())) continue;
+      for (auto row_iter = tableau_->Row(iter->Index())->Begin();
+           !row_iter->IsEnd(); row_iter = row_iter->Next()) {
+        if (tableau_is_base_variable_[row_iter->Index()]) continue;
+        if (_IsZero(row_iter->Data())) continue;
+        TableauPivot(artificial_var, index_to_variable_[row_iter->Index()]);
+        pivoted = true;
+        break;
+      }
+    }
+    assert(pivoted == true);
   }
 
   non_base_variables_.erase(artificial_var);
@@ -164,17 +177,19 @@ Result LPModel::TableauSimplexSolve() {
     if (result == NOSOLUTION) return NOSOLUTION;
     assert(result == SOLVED);
   }
+  assert(!needTableauInitialization(tableau_, constant_index_));
 
   while (true) {
     Variable e;
+    real_t max_ = std::numeric_limits<real_t>::min();
     // Find any non-base variable x_{e} that c_e > 0.
     for (auto iter = opt_obj_tableau_->Begin(); !iter->IsEnd();
          iter = iter->Next()) {
       if (iter->Index() == constant_index_) continue;
       if (tableau_is_base_variable_[iter->Index()]) continue;
-      if (_IsPositive(iter->Data())) {
+      if (_IsPositive(iter->Data()) and iter->Data() > max_) {
+        max_ = iter->Data();
         e = index_to_variable_[iter->Index()];
-        break;
       }
     }
     // If not found, which means \vec c <= \vec 0, so the maximum of the
@@ -186,7 +201,7 @@ Result LPModel::TableauSimplexSolve() {
     }
     // Find a base variable x_{d} s.t. A_{d,e} > 0 and minimize b_{d}/A_{d,e}
     Variable d;
-    Num min_ = kFloatMax;
+    real_t min_ = std::numeric_limits<real_t>::max();
     tableau_index_t e_col_indx = variable_to_index_[e];
     for (auto iter = tableau_->Col(e_col_indx)->Begin(); !iter->IsEnd();
          iter = iter->Next()) {

@@ -247,11 +247,13 @@ TEST(LPModel, TableauInitialization) {
   model.ToTableau();
 
   EXPECT_EQ(model.TableauSimplexInitialize(), Result::SOLVED);
-  EXPECT_EQ(model.PrintTableau(),
-            "-6.000000 * base0 + -6.000000 * x1 + 3.000000 * x2 + -6.000000\n"
-            "1.000000 * base0 + -1.000000 * x1 + -1.000000 * x2 + 1.000000\n"
-            "2.000000 * base0 + -1.000000 * base1 + -3.000000 * x2 + 1.000000\n"
-            "-1.000000 * base2 + -3.000000 * x2 + 2.000000\n");
+  EXPECT_EQ(
+      model.PrintTableau(),
+      "-4.000000 * base0 + -1.000000 * base1 + -6.000000 * x1 + -3.000000 * x2 "
+      "+ -5.000000\n"
+      "0.333333 * base0 + 0.333333 * base1 + -1.000000 * x1 + 0.666667\n"
+      "0.666667 * base0 + -0.333333 * base1 + -1.000000 * x2 + 0.333333\n"
+      "-2.000000 * base0 + 1.000000 * base1 + -1.000000 * base2 + 1.000000\n");
 
   EXPECT_EQ(model.TableauSimplexSolve(), Result::SOLVED);
   EXPECT_EQ(model.GetTableauSimplexOptimum(), 5.0f);
