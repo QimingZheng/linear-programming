@@ -10,8 +10,10 @@ def InitializeUnifiedVarNames(variables):
         unified_var_names[var] = "x" + str(total)
         total += 1
 
+
 def float_to_str(x):
     return format(x, "f")
+
 
 def parseExpression(affine_expr_coeffs, constant):
     ret = ""
@@ -41,7 +43,7 @@ def parseConstraint(con):
         ret += ">="
     else:
         ret += "<="
-    ret += float_to_str(con["constant"])
+    ret += float_to_str(-con["constant"])
     return ret
 
 
@@ -70,6 +72,7 @@ if __name__ == "__main__":
             for k, con in instance.constraints.items():
                 out.write(parseConstraint(con) + "\n")
             for var in instance.variables():
+                assert var.cat == "Continuous"
                 if var.lowBound != None:
                     out.write(
                         unified_var_names[var.name]
