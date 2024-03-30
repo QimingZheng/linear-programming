@@ -11,7 +11,7 @@ def InitializeUnifiedVarNames(variables):
         total += 1
 
 def float_to_str(x):
-    return format(x, 'f')
+    return format(x, "f")
 
 def parseExpression(affine_expr_coeffs, constant):
     ret = ""
@@ -21,7 +21,12 @@ def parseExpression(affine_expr_coeffs, constant):
         if coeff < 0:
             ret += float_to_str(coeff) + "*" + unified_var_names[var]
         else:
-            ret += ("+" if ind > 0 else "") + float_to_str(coeff) + "*" + unified_var_names[var]
+            ret += (
+                ("+" if ind > 0 else "")
+                + float_to_str(coeff)
+                + "*"
+                + unified_var_names[var]
+            )
         ind += 1
     ret += ("+" if ind > 0 else "") + float_to_str(constant)
     return ret
@@ -64,3 +69,18 @@ if __name__ == "__main__":
             out.write("st\n")
             for k, con in instance.constraints.items():
                 out.write(parseConstraint(con) + "\n")
+            for var in instance.variables():
+                if var.lowBound != None:
+                    out.write(
+                        unified_var_names[var.name]
+                        + ">="
+                        + float_to_str(var.lowBound)
+                        + "\n"
+                    )
+                if var.upBound != None:
+                    out.write(
+                        unified_var_names[var.name]
+                        + "<="
+                        + float_to_str(var.upBound)
+                        + "\n"
+                    )
