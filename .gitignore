@@ -9,3 +9,4 @@ tools/*
 !tools/preprocessing.sh
 datasets/*/*.mps
 datasets/*/*.txt
+!datasets/netlib_sol/*.txt

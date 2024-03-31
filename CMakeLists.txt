@@ -21,8 +21,13 @@ FetchContent_MakeAvailable(googletest)
 add_library(GTest::GTest INTERFACE IMPORTED)
 target_link_libraries(GTest::GTest INTERFACE gtest_main gmock_main)
 
+execute_process (
+    COMMAND bash -c "cd ${CMAKE_CURRENT_SOURCE_DIR}/tools && bash preprocessing.sh && cd -"
+)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/tests/
      DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/tests/)
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/datasets/
+     DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/datasets/)
 
 file(GLOB HEADERS *.h)
 file(GLOB TEST_SRCS *_test.cc)
@@ -91,4 +96,12 @@ foreach(Case ${TestCases})
   add_test(NAME TestColumnGeneration${Case} COMMAND ./solver tests/test${Case}.txt column_generation)
   file(READ tests/sol${Case}.txt Solution)
   set_tests_properties(TestColumnGeneration${Case} PROPERTIES PASS_REGULAR_EXPRESSION ${Solution})
+endforeach()
+
+# 25fv47 takes ~6min, optimize simplex_tableau solver so that it can be solved faster.
+set(TestCases adlittle afiro agg agg2 agg3 fit1d israel kb2)
+foreach(Case ${TestCases})
+  add_test(NAME TestSimplexTableau${Case} COMMAND ./solver datasets/netlib/${Case}.txt simplex_tableau)
+  file(READ datasets/netlib_sol/${Case}.txt Solution)
+  set_tests_properties(TestSimplexTableau${Case} PROPERTIES PASS_REGULAR_EXPRESSION ${Solution})
 endforeach()
