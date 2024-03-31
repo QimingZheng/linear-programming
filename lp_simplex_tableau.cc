@@ -1,6 +1,7 @@
 #include "lp.h"
 
-void LPModel::TableauPivot(Variable base, Variable non_base) {
+void LPModel::TableauPivot(Variable base, Variable non_base,
+                           tableau_index_t constraint_id) {
   assert(tableau_ != nullptr);
   assert(opt_obj_tableau_ != nullptr);
   assert(non_base_variables_.find(non_base) != non_base_variables_.end());
@@ -12,44 +13,32 @@ void LPModel::TableauPivot(Variable base, Variable non_base) {
 
   tableau_index_t base_column_index = variable_to_index_[base],
                   non_base_column_index = variable_to_index_[non_base];
+  assert(base_column_index != constant_index_);
+  assert(non_base_column_index != constant_index_);
   assert(tableau_is_base_variable_[base_column_index] == true);
   assert(tableau_is_base_variable_[non_base_column_index] == false);
   tableau_is_base_variable_[base_column_index] = false;
   tableau_is_base_variable_[non_base_column_index] = true;
 
-  // Find a row that contains both base and non_base.
-  List<real_t>* base_column =
-      new List<real_t>(tableau_->Col(base_column_index));
-  List<real_t>* non_base_column = tableau_->Col(non_base_column_index);
-  base_column->Mul(non_base_column);
-  tableau_index_t candidate_row_ind = -1;
-  for (auto iter = base_column->Begin(); iter->IsEnd() == false;
-       iter = iter->Next()) {
-    if (iter->Index() != constant_index_ and !_IsZero(iter->Data())) {
-      candidate_row_ind = iter->Index();
-      break;
-    }
-  }
-  assert(candidate_row_ind >= 0);
-  tableau_index_t candidate_col_ind = non_base_column_index;
+  // The row that contains both base and non_base.
+  assert(constraint_id >= 0);
 
-  auto substitution = new List<real_t>(tableau_->Row(candidate_row_ind));
-  substitution->Scale(opt_obj_tableau_->At(candidate_col_ind) *
-                      (-1.0 / substitution->At(candidate_col_ind)));
+  auto substitution = new List<real_t>(tableau_->Row(constraint_id));
+  substitution->Scale(opt_obj_tableau_->At(non_base_column_index) *
+                      (-1.0 / substitution->At(non_base_column_index)));
   opt_obj_tableau_->Add(substitution);
-  opt_obj_tableau_->Set(candidate_col_ind, 0);
+  opt_obj_tableau_->Set(non_base_column_index, 0);
 
-  auto candidate_row = new List<real_t>(tableau_->Row(candidate_row_ind));
-  candidate_row->Scale(-1.0 / candidate_row->At(candidate_col_ind));
-  auto candidate_col = new List<real_t>(tableau_->Col(candidate_col_ind));
+  auto candidate_row = new List<real_t>(tableau_->Row(constraint_id));
+  candidate_row->Scale(-1.0 / candidate_row->At(non_base_column_index));
+  auto candidate_col = new List<real_t>(tableau_->Col(non_base_column_index));
   candidate_col->Set(
-      candidate_row_ind,
-      1.0f + tableau_->Row(candidate_row_ind)->At(candidate_col_ind));
+      constraint_id,
+      1.0 + tableau_->Row(constraint_id)->At(non_base_column_index));
   auto helper_tableau_ = candidate_col->SparseCross(candidate_row);
   tableau_->Add(helper_tableau_);
 
   delete helper_tableau_;
-  delete base_column;
   delete substitution;
   delete candidate_col;
   delete candidate_row;
@@ -89,20 +78,20 @@ Result LPModel::TableauSimplexInitialize() {
   }
   tableau_->AppendExtraCol(extra_col);
 
-  List<real_t>::ReduceStruct min_bounding_constant = {-1, 0.0f};
-  min_bounding_constant =
+  List<real_t>::ReduceStruct min_bounding_constant_constraint = {-1, 0.0f};
+  min_bounding_constant_constraint =
       tableau_->Col(constant_index_)
-          ->Reduce(List<real_t>::MinReduce, min_bounding_constant);
+          ->Reduce(List<real_t>::MinReduce, min_bounding_constant_constraint);
 
-  assert(min_bounding_constant.first >= 0);
-  auto min_bounding_constant_constaint_index = min_bounding_constant.first;
+  assert(min_bounding_constant_constraint.first >= 0);
   for (auto iter =
-           tableau_->Row(min_bounding_constant_constaint_index)->Begin();
+           tableau_->Row(min_bounding_constant_constraint.first)->Begin();
        !iter->IsEnd(); iter = iter->Next()) {
     if (iter->Index() == constant_index_) continue;
     if (_IsZero(iter->Data())) continue;
     if (tableau_is_base_variable_[iter->Index()]) {
-      TableauPivot(index_to_variable_[iter->Index()], artificial_var);
+      TableauPivot(index_to_variable_[iter->Index()], artificial_var,
+                   min_bounding_constant_constraint.first);
       break;
     }
   }
@@ -111,7 +100,8 @@ Result LPModel::TableauSimplexInitialize() {
        iter = iter->Next())
     assert(_IsNonNegative(iter->Data()));
 
-  assert(TableauSimplexSolve() == SOLVED);
+  auto initialization_model_solve_result = TableauSimplexSolve();
+  assert(initialization_model_solve_result == SOLVED);
 
   if (GetTableauSimplexOptimum().IsNegative()) {
     return NOSOLUTION;
@@ -127,12 +117,14 @@ Result LPModel::TableauSimplexInitialize() {
            !row_iter->IsEnd(); row_iter = row_iter->Next()) {
         if (tableau_is_base_variable_[row_iter->Index()]) continue;
         if (_IsZero(row_iter->Data())) continue;
-        TableauPivot(artificial_var, index_to_variable_[row_iter->Index()]);
+        TableauPivot(artificial_var, index_to_variable_[row_iter->Index()],
+                     iter->Index());
         pivoted = true;
         break;
       }
     }
     assert(pivoted == true);
+    tableau_is_base_variable_[artificial_var_index] = false;
   }
 
   non_base_variables_.erase(artificial_var);
@@ -156,9 +148,9 @@ Result LPModel::TableauSimplexInitialize() {
          iter = iter->Next()) {
       if (!_IsZero(iter->Data())) {
         auto row = new List<real_t>(tableau_->Row(iter->Index()));
-        row->Scale(-1.0 / iter->Data());
-        row->Set(base_index, 0.0f);
-        row->Scale(opt_iter->Data());
+        row->Scale(-opt_iter->Data() / iter->Data());
+        // row->Set(base_index, 0.0f);
+        // row->Scale(opt_iter->Data());
         opt_obj_added_amount->Add(row);
         break;
       }
@@ -203,6 +195,7 @@ Result LPModel::TableauSimplexSolve() {
     Variable d;
     real_t min_ = std::numeric_limits<real_t>::max();
     tableau_index_t e_col_indx = variable_to_index_[e];
+    tableau_index_t pivoting_constraint_id = -1;
     for (auto iter = tableau_->Col(e_col_indx)->Begin(); !iter->IsEnd();
          iter = iter->Next()) {
       if (_IsZero(iter->Data())) continue;
@@ -218,6 +211,7 @@ Result LPModel::TableauSimplexSolve() {
           if (min_ > row_constant / (-iter->Data())) {
             min_ = row_constant / (-iter->Data());
             d = index_to_variable_[row_iter->Index()];
+            pivoting_constraint_id = row_ind;
           }
         }
       }
@@ -229,7 +223,7 @@ Result LPModel::TableauSimplexSolve() {
       return UNBOUNDED;
     }
     // Perform pivot(x_{d}, x_{e})
-    TableauPivot(d, e);
+    TableauPivot(d, e, pivoting_constraint_id);
   }
   return ERROR;
 }

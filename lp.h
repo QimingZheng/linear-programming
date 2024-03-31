@@ -75,7 +75,8 @@ class LPModel {
   // The key operation of the simplex method.
   void Pivot(Variable base, Variable non_base);
   // The version of Pivot operation using tableau.
-  void TableauPivot(Variable base, Variable non_base);
+  void TableauPivot(Variable base, Variable non_base,
+                    tableau_index_t constraint_id);
 
   // The phase 1 of the simplex method: initialization.
   Result Initialize();
@@ -258,7 +259,7 @@ class LPModel {
   std::map<tableau_index_t, Variable> index_to_variable_;
   // The column index of bounding constants.
   tableau_index_t constant_index_;
-  bool *tableau_is_base_variable_ = nullptr;
+  bool* tableau_is_base_variable_ = nullptr;
 
   // Variables that are overrided as user defined vars (usually used in method
   // ToDualForm).
