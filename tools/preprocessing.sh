@@ -7,3 +7,10 @@ for file in ../datasets/netlib/*;do
         python3 mps_load.py ${file}.mps ${file}.txt
     fi
 done
+
+for file in ../datasets/plato/*;do
+    if [[ $file == *.mps ]];
+    then
+        python3 mps_load.py ${file} ${file}.txt
+    fi
+done

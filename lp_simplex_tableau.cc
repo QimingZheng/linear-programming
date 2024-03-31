@@ -1,5 +1,10 @@
 #include "lp.h"
 
+template <>
+inline bool _IsZeroT(const real_t& x) {
+  return std::abs(x) < kEpsilonF;
+}
+
 void LPModel::TableauPivot(Variable base, Variable non_base,
                            tableau_index_t constraint_id) {
   assert(tableau_ != nullptr);

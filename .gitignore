@@ -10,3 +10,4 @@ tools/*
 datasets/*/*.mps
 datasets/*/*.txt
 !datasets/netlib_sol/*.txt
+!datasets/plato/*.mps

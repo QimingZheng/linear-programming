@@ -106,3 +106,5 @@ foreach(Case ${TestCases})
   file(READ datasets/netlib_sol/${Case}.txt Solution)
   set_tests_properties(TestSimplexTableau${Case} PROPERTIES PASS_REGULAR_EXPRESSION ${Solution})
 endforeach()
+
+# add plato test cases
