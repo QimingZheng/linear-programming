@@ -144,17 +144,17 @@ Result LPModel::TableauSimplexInitialize() {
     if (!tableau_is_base_variable_[opt_iter->Index()]) continue;
     if (_IsZero(opt_iter->Data())) continue;
     auto base_index = opt_iter->Index();
-    for (auto iter = tableau_->Col(base_index)->Begin(); !iter->IsEnd();
-         iter = iter->Next()) {
-      if (!_IsZero(iter->Data())) {
-        auto row = new List<real_t>(tableau_->Row(iter->Index()));
-        row->Scale(-opt_iter->Data() / iter->Data());
-        // row->Set(base_index, 0.0f);
-        // row->Scale(opt_iter->Data());
-        opt_obj_added_amount->Add(row);
-        break;
-      }
-    }
+
+    List<real_t>::ReduceStruct row_contains_basis = {-1, kEpsilonF};
+    row_contains_basis =
+        tableau_->Col(base_index)
+            ->Reduce(List<real_t>::MaxAbsReduce, row_contains_basis);
+    assert(row_contains_basis.first >= 0);
+
+    auto row = new List<real_t>(tableau_->Row(row_contains_basis.first));
+    row->Scale(-opt_iter->Data() / row->At(base_index));
+    opt_obj_added_amount->Add(row);
+    delete row;
   }
   opt_obj_tableau_->Add(opt_obj_added_amount);
   delete opt_obj_added_amount;
