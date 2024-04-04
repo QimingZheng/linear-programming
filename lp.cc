@@ -144,7 +144,7 @@ void LPModel::ToSlackForm() {
   }
 }
 
-void LPModel::ToTableau() {
+void LPModel::ToTableau(TableauStorageFormat format) {
   if (tableau_ != nullptr) return;
   variable_to_index_.clear();
   for (auto var : base_variables_) variable_to_index_[var] = -1;
@@ -167,7 +167,7 @@ void LPModel::ToTableau() {
   constant_index_ = next_id;
 
   tableau_ = new Tableau<real_t>(model_.constraints.size(),
-                                 variable_to_index_.size() + 1);
+                                 variable_to_index_.size() + 1, format);
   tableau_index_t row = 0, col = 0;
   for (auto con : model_.constraints) {
     List<real_t>* tableau_row = new List<real_t>();

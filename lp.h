@@ -67,7 +67,7 @@ class LPModel {
   void ToSlackForm();
 
   // Change the underlying storage's data structure to Tableau.
-  void ToTableau();
+  void ToTableau(TableauStorageFormat format = ROW_AND_COLUMN);
 
   std::string PrintTableau();
 
@@ -115,6 +115,12 @@ class LPModel {
   Num GetRevisedSimplexOptimum();
 
   std::map<Variable, Num> GetRevisedSimplexSolution();
+
+  Result TableauRevisiedSimplexSolve();
+
+  Num GetTableauRevisedSimplexOptimum();
+
+  std::map<Variable, Num> GetTableauRevisedSimplexSolution();
 
   /* The Dual Simplex Method. */
   Result DualSolve(std::set<Variable> dual_feasible_solution_basis);
