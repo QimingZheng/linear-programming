@@ -116,7 +116,9 @@ class LPModel {
 
   std::map<Variable, Num> GetRevisedSimplexSolution();
 
-  Result TableauRevisiedSimplexSolve();
+  Result TableauRevisedSimplexInitialize();
+
+  Result TableauRevisedSimplexSolve();
 
   Num GetTableauRevisedSimplexOptimum();
 
@@ -266,6 +268,15 @@ class LPModel {
   // The column index of bounding constants.
   tableau_index_t constant_index_;
   bool* tableau_is_base_variable_ = nullptr;
+
+  List<real_t>* basic_feasible_solution = nullptr;
+  List<real_t>* basis_coeff = nullptr;
+  Tableau<real_t>* basis_inverse = nullptr;
+  tableau_index_t* basis_indices = nullptr;
+  void TableauRevisedSimplexPivot(tableau_index_t leaving_basis,
+                                   tableau_index_t entering_basis,
+                                   List<real_t>* mu, real_t min_ratio);
+  void TableauRevisedSimplexRemoveRedundantConstraint(tableau_index_t row);
 
   // Variables that are overrided as user defined vars (usually used in method
   // ToDualForm).
