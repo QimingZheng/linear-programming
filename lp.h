@@ -71,6 +71,15 @@ class LPModel {
 
   std::string PrintTableau();
 
+  enum PivotingStrategy {
+    PIVOTING_UNKNOWN,
+    SMALLEST_SUBSCRIPT,
+    MAX_COST,
+    MAX_REDUCTION,
+  };
+
+  void SetPivotingStrategy(PivotingStrategy strategy) { strategy_ = strategy; }
+
   /* The Simplex Method. See: https://en.wikipedia.org/wiki/Simplex_algorithm */
   // The key operation of the simplex method.
   void Pivot(Variable base, Variable non_base);
@@ -274,8 +283,8 @@ class LPModel {
   Tableau<real_t>* basis_inverse = nullptr;
   tableau_index_t* basis_indices = nullptr;
   void TableauRevisedSimplexPivot(tableau_index_t leaving_basis,
-                                   tableau_index_t entering_basis,
-                                   List<real_t>* mu, real_t min_ratio);
+                                  tableau_index_t entering_basis,
+                                  List<real_t>* mu, real_t min_ratio);
   void TableauRevisedSimplexRemoveRedundantConstraint(tableau_index_t row);
 
   // Variables that are overrided as user defined vars (usually used in method
@@ -335,6 +344,8 @@ class LPModel {
 
   bool enable_logging_ = false;
   int log_every_iters_ = 1;
+
+  PivotingStrategy strategy_ = MAX_COST;
 };
 
 bool StandardFormSanityCheck(LPModel model);

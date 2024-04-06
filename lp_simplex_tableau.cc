@@ -1,3 +1,5 @@
+#include <iomanip>
+
 #include "lp.h"
 
 template <>
@@ -179,53 +181,119 @@ Result LPModel::TableauSimplexSolve() {
   while (true) {
     Variable e;
     real_t max_ = std::numeric_limits<real_t>::lowest();
-    // Find any non-base variable x_{e} that c_e > 0.
-    for (auto iter = opt_obj_tableau_->Begin(); !iter->IsEnd();
-         iter = iter->Next()) {
-      if (iter->Index() == constant_index_) continue;
-      if (tableau_is_base_variable_[iter->Index()]) continue;
-      if (_IsPositive(iter->Data()) and iter->Data() > max_) {
-        max_ = iter->Data();
-        e = index_to_variable_[iter->Index()];
-      }
-    }
-    // If not found, which means \vec c <= \vec 0, so the maximum of the
-    // objective function is already achieved.
-    if (e.IsUndefined()) {
-      simplex_solution_ = GetTableauSimplexSolution();
-      simplex_optimum_ = GetTableauSimplexOptimum();
-      return SOLVED;
-    }
-    // Find a base variable x_{d} s.t. A_{d,e} > 0 and minimize b_{d}/A_{d,e}
     Variable d;
     real_t min_ = std::numeric_limits<real_t>::max();
-    tableau_index_t e_col_indx = variable_to_index_[e];
     tableau_index_t pivoting_constraint_id = -1;
-    for (auto iter = tableau_->Col(e_col_indx)->Begin(); !iter->IsEnd();
-         iter = iter->Next()) {
-      if (_IsZero(iter->Data())) continue;
-      if (_IsNonNegative(iter->Data())) continue;
-      tableau_index_t row_ind = iter->Index();
-      auto row = tableau_->Row(row_ind);
-      auto row_constant = row->At(constant_index_);
-      for (auto row_iter = row->Begin(); !row_iter->IsEnd();
-           row_iter = row_iter->Next()) {
-        if (row_iter->Index() != constant_index_ and
-            tableau_is_base_variable_[row_iter->Index()] and
-            !_IsZero(row_iter->Data())) {
-          if (min_ > row_constant / (-iter->Data())) {
-            min_ = row_constant / (-iter->Data());
-            d = index_to_variable_[row_iter->Index()];
-            pivoting_constraint_id = row_ind;
+
+    if (strategy_ == MAX_COST) {
+      // Find any non-base variable x_{e} that c_e > 0.
+      for (auto iter = opt_obj_tableau_->Begin(); !iter->IsEnd();
+           iter = iter->Next()) {
+        if (iter->Index() == constant_index_) continue;
+        if (tableau_is_base_variable_[iter->Index()]) continue;
+        if (_IsPositive(iter->Data()) and iter->Data() > max_) {
+          max_ = iter->Data();
+          e = index_to_variable_[iter->Index()];
+        }
+      }
+      // If not found, which means \vec c <= \vec 0, so the maximum of the
+      // objective function is already achieved.
+      if (e.IsUndefined()) {
+        simplex_solution_ = GetTableauSimplexSolution();
+        simplex_optimum_ = GetTableauSimplexOptimum();
+        return SOLVED;
+      }
+      // Find a base variable x_{d} s.t. A_{d,e} > 0 and minimize b_{d}/A_{d,e}
+      tableau_index_t e_col_indx = variable_to_index_[e];
+      for (auto iter = tableau_->Col(e_col_indx)->Begin(); !iter->IsEnd();
+           iter = iter->Next()) {
+        if (_IsZero(iter->Data())) continue;
+        if (_IsNonNegative(iter->Data())) continue;
+        tableau_index_t row_ind = iter->Index();
+        auto row = tableau_->Row(row_ind);
+        auto row_constant = row->At(constant_index_);
+        for (auto row_iter = row->Begin(); !row_iter->IsEnd();
+             row_iter = row_iter->Next()) {
+          if (row_iter->Index() != constant_index_ and
+              tableau_is_base_variable_[row_iter->Index()] and
+              !_IsZero(row_iter->Data())) {
+            if (min_ > row_constant / (-iter->Data())) {
+              min_ = row_constant / (-iter->Data());
+              d = index_to_variable_[row_iter->Index()];
+              pivoting_constraint_id = row_ind;
+            }
           }
         }
       }
+      // If x_{d} is not found, which means the optimum is unbounded (by
+      // assigning x_{e} as +infinity, and all other non-base as 0).
+      if (d.IsUndefined()) {
+        // TODO
+        return UNBOUNDED;
+      }
     }
-    // If x_{d} is not found, which means the optimum is unbounded (by assigning
-    // x_{e} as +infinity, and all other non-base as 0).
-    if (d.IsUndefined()) {
-      // TODO
-      return UNBOUNDED;
+    if (strategy_ == MAX_REDUCTION) {
+      List<real_t>* bounding = new List<real_t>(tableau_->Rows(), DENSE);
+      for (auto i = 0; i < tableau_->Rows(); i++)
+        bounding->Set(i, tableau_->Col(constant_index_)->At(i));
+      for (auto it = bounding->Begin(); !it->IsEnd(); it = it->Next())
+        assert(_IsNonNegative(it->Data()));
+
+      std::vector<Variable> basis(tableau_->Rows());
+      for (auto i = 0; i < tableau_->Cols(); i++) {
+        if (i == constant_index_) continue;
+        if (tableau_is_base_variable_[i]) {
+          for (auto row = 0; row < tableau_->Rows(); row++) {
+            if (!_IsZero(tableau_->Row(row)->At(i))) {
+              basis[row] = index_to_variable_[i];
+              break;
+            }
+          }
+        }
+      }
+      for (auto var : basis) assert(!var.IsUndefined());
+
+      for (auto iter = opt_obj_tableau_->Begin(); !iter->IsEnd();
+           iter = iter->Next()) {
+        if (iter->Index() == constant_index_) continue;
+        if (tableau_is_base_variable_[iter->Index()]) continue;
+        if (!_IsPositive(iter->Data())) continue;
+        min_ = std::numeric_limits<real_t>::max();
+        Variable d_;
+        tableau_index_t pivoting_constraint_id_ = -1;
+        for (auto col_iter = tableau_->Col(iter->Index())->Begin();
+             !col_iter->IsEnd(); col_iter = col_iter->Next()) {
+          if (_IsNonNegative(col_iter->Data())) continue;
+          auto row_id = col_iter->Index();
+          auto row_constant = bounding->At(row_id);
+          assert(_IsNonNegative(row_constant));
+          if (min_ > row_constant / (-col_iter->Data())) {
+            min_ = row_constant / (-col_iter->Data());
+            d_ = basis[row_id];
+            pivoting_constraint_id_ = row_id;
+          }
+        }
+        if (e.IsUndefined()) e = index_to_variable_[iter->Index()];
+        if (!d_.IsUndefined()) {
+          if (iter->Data() * min_ > max_) {
+            max_ = iter->Data() * min_;
+            e = index_to_variable_[iter->Index()];
+            d = d_;
+            assert(!d.IsUndefined());
+            pivoting_constraint_id = pivoting_constraint_id_;
+          }
+        }
+      }
+
+      if (e.IsUndefined()) {
+        simplex_solution_ = GetTableauSimplexSolution();
+        simplex_optimum_ = GetTableauSimplexOptimum();
+        return SOLVED;
+      }
+      if (d.IsUndefined()) {
+        // TODO
+        return UNBOUNDED;
+      }
     }
     // Perform pivot(x_{d}, x_{e})
     TableauPivot(d, e, pivoting_constraint_id);

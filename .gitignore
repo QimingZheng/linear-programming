@@ -10,5 +10,6 @@ tools/*
 datasets/*/*.mps
 datasets/*/*.txt
 !datasets/netlib_simplex_sol/*.txt
+!datasets/netlib_simplex_sol_max_reduction/*.txt
 !datasets/netlib_revised_simplex_sol/*.txt
 !datasets/plato/*.mps

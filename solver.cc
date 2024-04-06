@@ -14,6 +14,14 @@ enum SolverAlgorithm {
   COLUMN_GENERATION,
 };
 
+std::string ToUpper(std::string str) {
+  std::string ret = "";
+  for (auto s : str) {
+    ret += std::toupper(s);
+  }
+  return ret;
+}
+
 std::string ToLower(std::string str) {
   std::string ret = "";
   for (auto s : str) {
@@ -41,6 +49,19 @@ SolverAlgorithm ParseAlgorithm(std::string algo) {
   return SOLVER_UNKNOWN;
 }
 
+LPModel::PivotingStrategy ParsePivotingStrategy(std::string algo) {
+  if (ToUpper(algo) == "SMALLEST_SUBSCRIPT") {
+    return LPModel::PivotingStrategy::SMALLEST_SUBSCRIPT;
+  }
+  if (ToUpper(algo) == "MAX_COST") {
+    return LPModel::PivotingStrategy::MAX_COST;
+  }
+  if (ToUpper(algo) == "MAX_REDUCTION") {
+    return LPModel::PivotingStrategy::MAX_REDUCTION;
+  }
+  return LPModel::PivotingStrategy::PIVOTING_UNKNOWN;
+}
+
 int main(int argc, char **argv) {
   assert(int(-1.5) == -1);
   assert(int(1.5) == 1);
@@ -50,7 +71,9 @@ int main(int argc, char **argv) {
   }
   std::ifstream lpfile(argv[1]);
   SolverAlgorithm solver = SIMPLEX;
-  if (argc == 3) solver = ParseAlgorithm(argv[2]);
+  LPModel::PivotingStrategy strategy = LPModel::PivotingStrategy::MAX_COST;
+  if (argc >= 3) solver = ParseAlgorithm(argv[2]);
+  if (argc >= 4) strategy = ParsePivotingStrategy(argv[3]);
   Parser parser;
   Model model = parser.Parse(lpfile);
   auto hasFloatVar = [](Constraint constraint) {
@@ -87,6 +110,7 @@ int main(int argc, char **argv) {
     std::map<Variable, Num> solution;
     switch (solver) {
       case SIMPLEX: {
+        lp_model.SetPivotingStrategy(strategy);
         lp_model.ToStandardForm();
         lp_model.ToSlackForm();
         result = lp_model.SimplexSolve();
@@ -97,6 +121,7 @@ int main(int argc, char **argv) {
       } break;
 
       case SIMPLEX_TABLEAU: {
+        lp_model.SetPivotingStrategy(strategy);
         lp_model.ToStandardForm();
         lp_model.ToSlackForm();
         lp_model.ToTableau();
@@ -108,6 +133,7 @@ int main(int argc, char **argv) {
       } break;
 
       case REVISED_SIMPLEX_TABLEAU: {
+        lp_model.SetPivotingStrategy(strategy);
         lp_model.ToStandardForm();
         lp_model.ToSlackForm();
         lp_model.ToTableau(COLUMN_ONLY);

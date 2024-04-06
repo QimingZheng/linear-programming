@@ -84,12 +84,22 @@ endforeach()
 
 set(TestCases 12 13 14 15 16 17)
 foreach(Case ${TestCases})
-  add_test(NAME TestSimplexTableau${Case} COMMAND ./solver tests/test${Case}.txt simplex_tableau)
+  add_test(NAME TestSimplexTableauMaxReduction${Case} COMMAND ./solver tests/test${Case}.txt simplex_tableau max_reduction)
+  file(READ tests/sol${Case}.txt Solution)
+  if (EXISTS tests/sol${Case}_simplex_tableau_max_reduction.txt)
+    file(READ tests/sol${Case}_simplex_tableau_max_reduction.txt Solution)
+  endif()
+  set_tests_properties(TestSimplexTableauMaxReduction${Case} PROPERTIES PASS_REGULAR_EXPRESSION ${Solution})
+endforeach()
+
+set(TestCases 12 13 14 15 16 17)
+foreach(Case ${TestCases})
+  add_test(NAME TestSimplexTableauMaxCost${Case} COMMAND ./solver tests/test${Case}.txt simplex_tableau max_cost)
   file(READ tests/sol${Case}.txt Solution)
   if (EXISTS tests/sol${Case}_simplex_tableau.txt)
     file(READ tests/sol${Case}_simplex_tableau.txt Solution)
   endif()
-  set_tests_properties(TestSimplexTableau${Case} PROPERTIES PASS_REGULAR_EXPRESSION ${Solution})
+  set_tests_properties(TestSimplexTableauMaxCost${Case} PROPERTIES PASS_REGULAR_EXPRESSION ${Solution})
 endforeach()
 
 set(TestCases 12 13 14 15 16 17)
@@ -109,12 +119,20 @@ foreach(Case ${TestCases})
   set_tests_properties(TestColumnGeneration${Case} PROPERTIES PASS_REGULAR_EXPRESSION ${Solution})
 endforeach()
 
+# TODO: fit1d seems fall into degenration issue.
+set(TestCases adlittle afiro agg agg2 agg3 israel kb2)
+foreach(Case ${TestCases})
+  add_test(NAME TestSimplexTableauMaxReduction${Case} COMMAND ./solver datasets/netlib/${Case}.txt simplex_tableau max_reduction)
+  file(READ datasets/netlib_simplex_sol_max_reduction/${Case}.txt Solution)
+  set_tests_properties(TestSimplexTableauMaxReduction${Case} PROPERTIES PASS_REGULAR_EXPRESSION ${Solution})
+endforeach()
+
 # 25fv47 takes ~6min, optimize simplex_tableau solver so that it can be solved faster.
 set(TestCases adlittle afiro agg agg2 agg3 fit1d israel kb2)
 foreach(Case ${TestCases})
-  add_test(NAME TestSimplexTableau${Case} COMMAND ./solver datasets/netlib/${Case}.txt simplex_tableau)
+  add_test(NAME TestSimplexTableauMaxCost${Case} COMMAND ./solver datasets/netlib/${Case}.txt simplex_tableau max_cost)
   file(READ datasets/netlib_simplex_sol/${Case}.txt Solution)
-  set_tests_properties(TestSimplexTableau${Case} PROPERTIES PASS_REGULAR_EXPRESSION ${Solution})
+  set_tests_properties(TestSimplexTableauMaxCost${Case} PROPERTIES PASS_REGULAR_EXPRESSION ${Solution})
 endforeach()
 
 # 25fv47, agg, agg2, agg3, fit1d takes too long
