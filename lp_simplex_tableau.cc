@@ -178,7 +178,7 @@ Result LPModel::TableauSimplexSolve() {
 
   while (true) {
     Variable e;
-    real_t max_ = std::numeric_limits<real_t>::min();
+    real_t max_ = std::numeric_limits<real_t>::lowest();
     // Find any non-base variable x_{e} that c_e > 0.
     for (auto iter = opt_obj_tableau_->Begin(); !iter->IsEnd();
          iter = iter->Next()) {
