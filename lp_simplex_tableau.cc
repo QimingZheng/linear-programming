@@ -236,8 +236,6 @@ Result LPModel::TableauSimplexSolve() {
       List<real_t>* bounding = new List<real_t>(tableau_->Rows(), DENSE);
       for (auto i = 0; i < tableau_->Rows(); i++)
         bounding->Set(i, tableau_->Col(constant_index_)->At(i));
-      for (auto it = bounding->Begin(); !it->IsEnd(); it = it->Next())
-        assert(_IsNonNegative(it->Data()));
 
       std::vector<Variable> basis(tableau_->Rows());
       for (auto i = 0; i < tableau_->Cols(); i++) {
@@ -251,40 +249,119 @@ Result LPModel::TableauSimplexSolve() {
           }
         }
       }
-      for (auto var : basis) assert(!var.IsUndefined());
 
-      for (auto iter = opt_obj_tableau_->Begin(); !iter->IsEnd();
-           iter = iter->Next()) {
-        if (iter->Index() == constant_index_) continue;
-        if (tableau_is_base_variable_[iter->Index()]) continue;
-        if (!_IsPositive(iter->Data())) continue;
-        min_ = std::numeric_limits<real_t>::max();
-        Variable d_;
-        tableau_index_t pivoting_constraint_id_ = -1;
-        for (auto col_iter = tableau_->Col(iter->Index())->Begin();
-             !col_iter->IsEnd(); col_iter = col_iter->Next()) {
-          if (_IsNonNegative(col_iter->Data())) continue;
-          auto row_id = col_iter->Index();
-          auto row_constant = bounding->At(row_id);
-          assert(_IsNonNegative(row_constant));
-          if (min_ > row_constant / (-col_iter->Data())) {
-            min_ = row_constant / (-col_iter->Data());
-            d_ = basis[row_id];
-            pivoting_constraint_id_ = row_id;
+      if (opt_obj_tableau_->Size() > 128) {
+        // Problem size large enough to use parallelism
+        struct MapFnStruct {
+          tableau_index_t entering_basis_index = -1;
+          tableau_index_t leaving_basis_index = -1;
+          tableau_index_t constraint_id = -1;
+          real_t max_reduction = std::numeric_limits<real_t>::lowest();
+          MapFnStruct(int) {}
+          MapFnStruct(tableau_index_t entering_basis_index_,
+                      tableau_index_t leaving_basis_index_,
+                      tableau_index_t constraint_id_, real_t max_reduction_)
+              : entering_basis_index(entering_basis_index_),
+                leaving_basis_index(leaving_basis_index_),
+                constraint_id(constraint_id_),
+                max_reduction(max_reduction_) {}
+          MapFnStruct() {}
+          MapFnStruct(const MapFnStruct& other)
+              : entering_basis_index(other.entering_basis_index),
+                leaving_basis_index(other.leaving_basis_index),
+                constraint_id(other.constraint_id),
+                max_reduction(other.max_reduction) {}
+        };
+        std::function<MapFnStruct(const tableau_index_t&, const real_t&)>
+            MapFn = [&](const tableau_index_t& index,
+                        const real_t& cost) -> MapFnStruct {
+          if (index == constant_index_)
+            return MapFnStruct(-1, -1, -1,
+                               std::numeric_limits<real_t>::lowest());
+          if (tableau_is_base_variable_[index])
+            return MapFnStruct(-1, -1, -1,
+                               std::numeric_limits<real_t>::lowest());
+          if (!_IsPositive(cost))
+            return MapFnStruct(-1, -1, -1,
+                               std::numeric_limits<real_t>::lowest());
+
+          real_t _min = std::numeric_limits<real_t>::max();
+          tableau_index_t leaving_index = -1;
+          tableau_index_t pivoting_constraint_id_ = -1;
+          for (auto col_iter = tableau_->Col(index)->Begin();
+               !col_iter->IsEnd(); col_iter = col_iter->Next()) {
+            if (_IsNonNegative(col_iter->Data())) continue;
+            auto row_id = col_iter->Index();
+            auto row_constant = bounding->At(row_id);
+            assert(_IsNonNegative(row_constant));
+            if (_min > row_constant / (-col_iter->Data())) {
+              _min = row_constant / (-col_iter->Data());
+              leaving_index = row_id;
+              pivoting_constraint_id_ = row_id;
+            }
+          }
+          return MapFnStruct(index, leaving_index, pivoting_constraint_id_,
+                             index >= 0 and leaving_index >= 0
+                                 ? cost * _min
+                                 : std::numeric_limits<real_t>::lowest());
+        };
+
+        auto mapped = opt_obj_tableau_->Map(MapFn);
+        MapFnStruct optimal = {-1, -1, -1,
+                               std::numeric_limits<real_t>::lowest()};
+        for (auto iter = mapped->Begin(); !iter->IsEnd(); iter = iter->Next()) {
+          MapFnStruct element = iter->Data();
+          if (element.entering_basis_index < 0) continue;
+          if (optimal.entering_basis_index < 0) {
+            optimal = element;
+          }
+          if (element.leaving_basis_index < 0) continue;
+          if (optimal.leaving_basis_index < 0) {
+            optimal = element;
+          }
+          if (element.max_reduction > optimal.max_reduction) {
+            optimal = element;
           }
         }
-        if (e.IsUndefined()) e = index_to_variable_[iter->Index()];
-        if (!d_.IsUndefined()) {
-          if (iter->Data() * min_ > max_) {
-            max_ = iter->Data() * min_;
-            e = index_to_variable_[iter->Index()];
-            d = d_;
-            assert(!d.IsUndefined());
-            pivoting_constraint_id = pivoting_constraint_id_;
+
+        if (optimal.entering_basis_index >= 0)
+          e = index_to_variable_[optimal.entering_basis_index];
+        if (optimal.leaving_basis_index >= 0)
+          d = basis[optimal.leaving_basis_index];
+        pivoting_constraint_id = optimal.constraint_id;
+      } else {
+        for (auto iter = opt_obj_tableau_->Begin(); !iter->IsEnd();
+             iter = iter->Next()) {
+          if (iter->Index() == constant_index_) continue;
+          if (tableau_is_base_variable_[iter->Index()]) continue;
+          if (!_IsPositive(iter->Data())) continue;
+          min_ = std::numeric_limits<real_t>::max();
+          Variable d_;
+          tableau_index_t pivoting_constraint_id_ = -1;
+          for (auto col_iter = tableau_->Col(iter->Index())->Begin();
+               !col_iter->IsEnd(); col_iter = col_iter->Next()) {
+            if (_IsNonNegative(col_iter->Data())) continue;
+            auto row_id = col_iter->Index();
+            auto row_constant = bounding->At(row_id);
+            assert(_IsNonNegative(row_constant));
+            if (min_ > row_constant / (-col_iter->Data())) {
+              min_ = row_constant / (-col_iter->Data());
+              d_ = basis[row_id];
+              pivoting_constraint_id_ = row_id;
+            }
+          }
+          if (e.IsUndefined()) e = index_to_variable_[iter->Index()];
+          if (!d_.IsUndefined()) {
+            if (iter->Data() * min_ > max_) {
+              max_ = iter->Data() * min_;
+              e = index_to_variable_[iter->Index()];
+              d = d_;
+              assert(!d.IsUndefined());
+              pivoting_constraint_id = pivoting_constraint_id_;
+            }
           }
         }
       }
-
       if (e.IsUndefined()) {
         simplex_solution_ = GetTableauSimplexSolution();
         simplex_optimum_ = GetTableauSimplexOptimum();
